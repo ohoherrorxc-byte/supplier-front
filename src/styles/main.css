@@ -1,0 +1,39 @@
+:root {
+  --srm-bg: #f5f7fa;
+  --srm-header: #0f172a;
+  --srm-accent: #1677ff;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  background: var(--srm-bg);
+  color: #1f2937;
+}
+
+.srm-page {
+  /* max-width: 1200px; */
+  /* margin: 0; */
+  padding: 24px 16px 48px;
+  margin: 0 auto;
+  /* padding: 20; */
+}
+
+.srm-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
