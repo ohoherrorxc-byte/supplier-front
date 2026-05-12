@@ -26,9 +26,9 @@
         <template v-if="column.key === 'invoiceTotalAmount'">
           ¥{{ Number(record.invoiceTotalAmount || 0).toFixed(2) }}
         </template>
-        <template v-if="column.key === 'invoiceDate'">
+        <!-- <template v-if="column.key === 'invoiceDate'">
           {{ formatDate(record.invoiceDate) }}
-        </template>
+        </template> -->
         <template v-if="column.key === 'status'">
           <a-tag :color="statusColor(record.status)">
             {{ statusText(record.status) }}
@@ -44,9 +44,35 @@
     <a-modal
       v-model:open="detailModalVisible"
       title="结算单明细"
-      width="800px"
-      :footer="null"
+      width="900px"
     >
+      <template #footer>
+        <a-button @click="detailModalVisible = false">关闭</a-button>
+        <a-button v-if="currentDetail?.status === 0" danger @click="confirmDelete">删除</a-button>
+        <a-button v-if="currentDetail?.status === 0" type="primary" @click="confirmSubmit">提交结算单</a-button>
+      </template>
+      <a-table
+        :columns="invoiceColumns"
+        :data-source="invoiceList"
+        :pagination="false"
+        row-key="id"
+        size="small"
+        style="margin-bottom: 16px"
+      >
+        <template #title>发票明细</template>
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'taxAmount'">
+            {{ Number(record.taxAmount || 0).toFixed(2) }}
+          </template>
+          <template v-if="column.key === 'totalAmount'">
+            {{ Number(record.totalAmount || 0).toFixed(2) }}
+          </template>
+          <template v-if="column.key === 'attachment'">
+            <a v-if="record.attachmentUrl" href="javascript:void(0)" @click="downloadFile(record.attachmentUrl, record.attachmentName)">{{ record.attachmentName || '下载附件' }}</a>
+            <span v-else>-</span>
+          </template>
+        </template>
+      </a-table>
       <a-table
         :columns="detailColumns"
         :data-source="detailList"
@@ -54,15 +80,13 @@
         row-key="id"
         size="small"
       >
+        <template #title>验收明细</template>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'quantity'">
             {{ Number(record.quantity || 0).toFixed(2) }}
           </template>
           <template v-if="column.key === 'amount'">
             {{ Number(record.amount || 0).toFixed(2) }}
-          </template>
-          <template v-if="column.key === 'totalAmount'">
-            {{ Number(record.totalAmount || 0).toFixed(2) }}
           </template>
         </template>
       </a-table>
@@ -72,8 +96,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { message } from 'ant-design-vue'
-import { listSettlementOrders, getSettlementDetails } from '@/api/srm'
+import { message, Modal } from 'ant-design-vue'
+import { listSettlementOrders, getSettlementDetails, downloadFile, submitSettlement, deleteSettlement } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import dayjs from 'dayjs'
 
@@ -81,8 +105,10 @@ const session = useSessionStore()
 
 const loading = ref(false)
 const dataList = ref<any[]>([])
+const invoiceList = ref<any[]>([])
 const detailList = ref<any[]>([])
 const detailModalVisible = ref(false)
+const currentDetail = ref<any>(null)
 
 const searchForm = reactive({
   settlementNo: ''
@@ -106,13 +132,24 @@ const columns = [
   { title: '操作', key: 'action', width: 100 }
 ]
 
+const invoiceColumns = [
+  { title: '发票号码', dataIndex: 'invoiceNo', key: 'invoiceNo', width: 140 },
+  { title: '开票日期', dataIndex: 'invoiceDate', key: 'invoiceDate', width: 120 },
+  { title: '项目名称', dataIndex: 'projectName', key: 'projectName', width: 150 },
+  { title: '零件号', dataIndex: 'partNo', key: 'partNo', width: 120 },
+  { title: '税率', dataIndex: 'taxRate', key: 'taxRate', width: 80 },
+  { title: '税额', dataIndex: 'taxAmount', key: 'taxAmount', width: 100, align: 'right' },
+  { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right' },
+  { title: '附件', key: 'attachment', width: 120 }
+]
+
 const detailColumns = [
-  { title: '零件号', dataIndex: 'partsNo', key: 'partsNo' },
-  { title: '零件名称', dataIndex: 'partsName', key: 'partsName' },
-  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo' },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', align: 'right' },
-  { title: '金额', dataIndex: 'amount', key: 'amount', align: 'right' },
-  { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', align: 'right' }
+  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 200 },
+  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 250 },
+  { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
+  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 200 },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
+  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
 ]
 
 function statusText(status: number) {
@@ -173,12 +210,48 @@ function resetSearch() {
 
 async function viewDetails(record: any) {
   try {
+    currentDetail.value = record
     const result = await getSettlementDetails(String(record.id))
+    invoiceList.value = result.invoiceLines || []
     detailList.value = result.details || []
     detailModalVisible.value = true
   } catch (e: any) {
     message.error(e.message || '加载明细失败')
   }
+}
+
+function confirmSubmit() {
+  Modal.confirm({
+    title: '确认提交',
+    content: '提交后结算单将无法修改，确认提交吗？',
+    async onOk() {
+      try {
+        await submitSettlement(String(currentDetail.value.id))
+        message.success('提交成功')
+        detailModalVisible.value = false
+        loadData()
+      } catch (e: any) {
+        message.error(e.message || '提交失败')
+      }
+    }
+  })
+}
+
+function confirmDelete() {
+  Modal.confirm({
+    title: '确认删除',
+    content: '删除后无法恢复，确认删除吗？',
+    async onOk() {
+      try {
+        await deleteSettlement(String(currentDetail.value.id))
+        message.success('删除成功')
+        detailModalVisible.value = false
+        loadData()
+      } catch (e: any) {
+        message.error(e.message || '删除失败')
+      }
+    }
+  })
 }
 
 onMounted(() => {

@@ -11,7 +11,7 @@
           <el-col :span="24">
             <a-upload
               :before-upload="handleFileUpload"
-              :show-upload-list="true"
+              :show-upload-list="false"
               accept=".pdf,.jpg,.jpeg,.png"
             >
             <a-button type="primary">
@@ -54,6 +54,12 @@
                 placeholder="税率"
               />
             </template>
+            <template v-else-if="column.key === 'amountDetail'">
+              <span>
+                不含税：{{ (Number(record.totalAmount || 0) - Number(record.taxAmount || 0)).toFixed(2) }}，
+                税额：{{ Number(record.taxAmount || 0).toFixed(2) }}
+              </span>
+            </template>
             <template v-else-if="column.key === 'taxAmount'">
               <a-input-number
                 v-model:value="record.taxAmount"
@@ -73,7 +79,7 @@
               />
             </template>
             <template v-else-if="column.key === 'fileName'">
-              <a :href="record.fileUrl" target="_blank" v-if="record.fileUrl">
+              <a href="javascript:void(0)" v-if="record.fileUrl" @click="downloadFile(record.fileUrl, record.fileName)">
                 {{ record.fileName }}
               </a>
               <span v-else>-</span>
@@ -155,8 +161,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
-import { createSettlementOrder, ocrRecognize, uploadFile } from '@/api/srm'
+import { message } from 'ant-design-vue'
+import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import { LoadingOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
@@ -192,18 +198,21 @@ const invoiceColumns = [
   { title: '项目名称', key: 'projectName', width: 120 },
   { title: '零件号', key: 'partNo', width: 100 },
   { title: '税率(%)', key: 'taxRate', width: 80 },
-  { title: '税额', key: 'taxAmount', width: 100 },
-  { title: '价税合计', key: 'totalAmount', width: 100 },
+  { title: '金额详情', key: 'amountDetail', width: 200 },
+  { title: '价税合计', key: 'totalAmount', width: 120 },
   { title: '附件', key: 'fileName', width: 150 },
   { title: '操作', key: 'action', width: 80 }
 ]
 
 const detailColumns = [
-  { title: '零件号', dataIndex: 'partsNo', key: 'partsNo' },
-  { title: '零件名称', dataIndex: 'partsName', key: 'partsName' },
-  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo' },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', align: 'right' },
-  { title: '金额', dataIndex: 'amount', key: 'amount', align: 'right' }
+ 
+  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 250 },
+  
+  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark' ,width: 250},
+   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo'},
+  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 240 },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
+  { title: '金额', dataIndex: 'amount', key: 'amount', width: 200, align: 'right' }
 ]
 
 const totalDetailAmount = computed(() => {
@@ -256,25 +265,28 @@ async function handleFileUpload(file: File) {
     const attachmentId = uploadResult.success && uploadResult.id ? uploadResult.id : null
 
     // 调用OCR识别
-    const result = await ocrRecognize(file)
+    const result: any = await ocrRecognize(file)
 
-    // 添加一行发票数据
-    const newLine: InvoiceLine = {
-      key: generateKey(),
-      invoiceNo: result.invoiceNo || '',
-      invoiceDate: result.invoiceDate ? dayjs(result.invoiceDate) : null,
-      projectName: result.projectName || '',
-      partNo: result.partNo || '',
-      taxRate: result.taxRate || 13,
-      taxAmount: result.taxAmount || 0,
-      totalAmount: result.totalAmount || 0,
-      attachmentId,
-      fileName: uploadResult.name || file.name,
-      fileUrl: uploadResult.url || ''
+    // 支持多张发票：invoiceResults 数组有多条则添加多条
+    const results = result.invoiceResults || [result]
+    for (const r of results) {
+      const newLine: InvoiceLine = {
+        key: generateKey(),
+        invoiceNo: r.invoiceNo || '',
+        invoiceDate: r.invoiceDate ? dayjs(r.invoiceDate) : null,
+        projectName: r.projectName || '',
+        partNo: r.partNo || '',
+        taxRate: r.taxRate || 13,
+        taxAmount: r.taxAmount || 0,
+        totalAmount: r.totalAmount || 0,
+        attachmentId,
+        fileName: uploadResult.name || file.name,
+        fileUrl: uploadResult.url || ''
+      }
+      invoiceLines.value.push(newLine)
     }
-    invoiceLines.value.push(newLine)
 
-    message.success(result.message || 'OCR识别完成，已添加到发票列表')
+    message.success(result.message || `OCR识别完成，已添加 ${results.length} 条发票`)
   } catch (e: any) {
     message.error(e.message || '处理失败')
   } finally {
@@ -302,13 +314,29 @@ async function onSubmit() {
     return
   }
 
+  // 校验所有勾选的明细必须是同一验收申请编号
+  const applyNos = [...new Set(selectedDetails.value.map((d: any) => d.acceptApplyNo))]
+  if (applyNos.length > 1) {
+    message.warning('不允许同时结算不同验收申请编号的明细，请分开操作')
+    return
+  }
+
+  // 检查是否有草稿结算单
+  const acceptDetailIds = selectedDetails.value.map(d => d.acceptDetailId)
+  try {
+    const checkResult = await checkDraftSettlement(acceptDetailIds)
+    if (checkResult.hasDraft) {
+      message.warning(checkResult.message || '已有草稿结算单，请勿重复操作')
+      return
+    }
+  } catch (e: any) {
+    message.error(e.message || '检查失败')
+    return
+  }
+
   // 金额校验
   if (!amountMatch.value) {
-    Modal.confirm({
-      title: '金额校验异常',
-      content: `发票金额与勾选的验收明细总金额不符，相差 ¥${Math.abs(amountDiff.value).toFixed(2)}，是否确认提交？`,
-      onOk: () => doSubmit()
-    })
+    message.warning(`发票金额与验收明细金额不符，相差 ¥${Math.abs(amountDiff.value).toFixed(2)}，请核实后再提交`)
     return
   }
 

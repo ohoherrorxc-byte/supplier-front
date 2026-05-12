@@ -560,7 +560,43 @@ export async function listSettlementOrders(params: {
 
 // 结算单明细
 export async function getSettlementDetails(settlementId: string) {
-  const { data } = await http.get<{ details: JsonMap[] }>(`/invoice/settlement/${settlementId}`)
+  const { data } = await http.get<{ invoiceLines: JsonMap[]; details: JsonMap[] }>(`/invoice/settlement/${settlementId}`)
+  return data
+}
+
+// 代理下载文件
+export async function downloadFile(url: string, filename?: string) {
+  const path = url.replace(/^https?:\/\/[^\/]+\//, '')
+  const params = new URLSearchParams({ path })
+  if (filename) params.set('filename', filename)
+  const res = await fetch(`/api/file/download?${params.toString()}`, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('srm_token') || ''}` }
+  })
+  if (!res.ok) throw new Error('下载失败')
+  const blob = await res.blob()
+  const blobUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = blobUrl
+  a.download = filename || '附件'
+  a.click()
+  URL.revokeObjectURL(blobUrl)
+}
+
+// 提交结算单
+export async function submitSettlement(settlementId: string) {
+  const { data } = await http.post<{ success: boolean; message: string }>(`/invoice/settlement/${settlementId}/submit`)
+  return data
+}
+
+// 删除草稿结算单
+export async function deleteSettlement(settlementId: string) {
+  const { data } = await http.post<{ success: boolean; message: string }>(`/invoice/settlement/${settlementId}/delete`)
+  return data
+}
+
+// 检查是否有草稿结算单
+export async function checkDraftSettlement(acceptDetailIds: number[]) {
+  const { data } = await http.post<{ hasDraft: boolean; settlementNo?: string; message?: string }>('/invoice/settlement/check', acceptDetailIds)
   return data
 }
 

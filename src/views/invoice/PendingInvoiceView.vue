@@ -80,7 +80,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
+import { listPendingInvoiceGeneral, listPendingInvoiceBom, checkDraftSettlement } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import dayjs from 'dayjs'
 
@@ -112,7 +112,7 @@ const columns = [
   { title: '验收申请编号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
   { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 180 },
-  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 200 },
+  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 220 },
   { title: '订单号', dataIndex: 'contractNo', key: 'contractNo', width: 150 },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' },
   { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
@@ -124,24 +124,58 @@ const columns = [
 const rowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
   onChange: (keys: any[], rows: any[]) => {
-    // 如果没有任何选择，直接通过
+    // 如果没有任何选择，直接清空
     if (rows.length === 0) {
+      selectedRowKeys.value = []
+      selectedRows.value = []
+      return
+    }
+
+    // 判断是选中还是取消选中：keys 数量减少为取消，否则为选中
+    const isDeselecting = keys.length < selectedRowKeys.value.length
+
+    if (isDeselecting) {
+      // 取消选中：找出被取消的那个 acceptApplyNo
+      const removedKeys = selectedRowKeys.value.filter(k => !keys.includes(k))
+      const removedRow = selectedRows.value.find((r: any) => removedKeys.includes(r.acceptDetailId))
+      const removedApplyNo = removedRow?.acceptApplyNo
+
+      // 取消选中某行时，同 acceptApplyNo 的行全部取消
+      const sameApplyNoKeys = dataList.value
+        .filter((r: any) => r.acceptApplyNo === removedApplyNo)
+        .map((r: any) => r.acceptDetailId)
+
+      selectedRowKeys.value = keys.filter(k => !sameApplyNoKeys.includes(k))
+      selectedRows.value = dataList.value.filter((r: any) => selectedRowKeys.value.includes(r.acceptDetailId))
+      return
+    }
+
+    // 选中操作：获取新选中行的 acceptApplyNo
+    const newKeys = keys.filter(k => !selectedRowKeys.value.includes(k))
+    const newRow = rows.find((r: any) => newKeys.includes(r.acceptDetailId))
+    const targetApplyNo = newRow?.acceptApplyNo
+
+    if (!targetApplyNo) {
       selectedRowKeys.value = keys
       selectedRows.value = rows
       return
     }
 
-    // 检查所有选中行是否属于同一供应商
-    const suppliers = [...new Set(rows.map(r => r.supplierNo).filter(Boolean))]
-
-    // 只允许选择同一供应商
-    if (suppliers.length > 1) {
-      message.warning('只能选择同一供应商的明细进行结算')
+    // 检查是否有不同 acceptApplyNo 的行混入选中
+    const otherApplyNos = [...new Set(rows.map((r: any) => r.acceptApplyNo).filter(Boolean))]
+    if (otherApplyNos.length > 1) {
+      message.warning('不能同时选择不同验收申请编号的明细')
+      // 恢复原状态
       return
     }
 
-    selectedRowKeys.value = keys
-    selectedRows.value = rows
+    // 自动选中所有同 acceptApplyNo 的行
+    const sameApplyNoRows = dataList.value.filter((r: any) => r.acceptApplyNo === targetApplyNo)
+    const sameApplyNoKeys = sameApplyNoRows.map((r: any) => r.acceptDetailId)
+    const allKeys = [...new Set([...keys, ...sameApplyNoKeys])]
+
+    selectedRowKeys.value = allKeys
+    selectedRows.value = dataList.value.filter((r: any) => allKeys.includes(r.acceptDetailId))
   }
 }))
 
@@ -204,9 +238,29 @@ function formatDate(dateStr: string) {
   return dayjs(dateStr).format('YYYY-MM-DD')
 }
 
-function onGenerateSettlement() {
+async function onGenerateSettlement() {
   if (selectedRows.value.length === 0) {
     message.warning('请先选择要结算的明细')
+    return
+  }
+
+  // 校验所有勾选的明细必须是同一验收申请编号
+  const applyNos = [...new Set(selectedRows.value.map((r: any) => r.acceptApplyNo))]
+  if (applyNos.length > 1) {
+    message.warning('不允许同时结算不同验收申请编号的明细，请分开选择')
+    return
+  }
+
+  // 检查是否有草稿结算单
+  const acceptDetailIds = selectedRows.value.map((r: any) => r.acceptDetailId)
+  try {
+    const checkResult = await checkDraftSettlement(acceptDetailIds)
+    if (checkResult.hasDraft) {
+      message.warning(checkResult.message || '已有草稿结算单，请勿重复操作')
+      return
+    }
+  } catch (e: any) {
+    message.error(e.message || '检查失败')
     return
   }
 
