@@ -485,6 +485,9 @@ export async function uploadFile(file: File, businessId?: string, businessName?:
   }
   const response = await fetch('/api/file/upload', {
     method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('srm_token') || ''}`
+    },
     body: formData
   })
   if (!response.ok) {
@@ -502,4 +505,78 @@ export async function listFiles(params: {
 }) {
   const { data } = await http.get<{ items: JsonMap[]; total: number }>('/file/list', { params })
   return data
+}
+
+// ============ 供应商开票 API ============
+
+// 待开票清单 - 一般采购
+export async function listPendingInvoiceGeneral(params: {
+  userId: string
+  partsNo?: string
+  partsName?: string
+  pageSize?: number
+  pageNum?: number
+}) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/invoice/pending/general', { params })
+  return data
+}
+
+// 待开票清单 - BOM采购
+export async function listPendingInvoiceBom(params: {
+  userId: string
+  partsNo?: string
+  partsName?: string
+  pageSize?: number
+  pageNum?: number
+}) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/invoice/pending/bom', { params })
+  return data
+}
+
+// 创建结算单
+export async function createSettlementOrder(params: {
+  userId: string
+  supplierName: string
+  remark?: string
+  createDept?: string
+  acceptDetailIds: number[]
+  invoiceLines: JsonMap[]
+}) {
+  const { data } = await http.post<{ settlementId: number; settlementNo: string; message: string }>('/invoice/settlement', params)
+  return data
+}
+
+// 结算单列表
+export async function listSettlementOrders(params: {
+  userId: string
+  settlementNo?: string
+  status?: number
+  pageSize?: number
+  pageNum?: number
+}) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/invoice/settlement/list', { params })
+  return data
+}
+
+// 结算单明细
+export async function getSettlementDetails(settlementId: string) {
+  const { data } = await http.get<{ details: JsonMap[] }>(`/invoice/settlement/${settlementId}`)
+  return data
+}
+
+// OCR识别发票
+export async function ocrRecognize(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await fetch('/api/invoice/ocr', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('srm_token') || ''}`
+    },
+    body: formData
+  })
+  if (!response.ok) {
+    throw new Error('OCR识别失败')
+  }
+  return response.json()
 }

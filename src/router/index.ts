@@ -90,6 +90,30 @@ const router = createRouter({
           meta: { title: '个人信息' },
         },
         {
+          path: 'invoice/pending/general',
+          name: 'invoice-pending-general',
+          component: () => import('@/views/invoice/PendingInvoiceView.vue'),
+          meta: { title: '待开票清单-一般采购' },
+        },
+        {
+          path: 'invoice/pending/bom',
+          name: 'invoice-pending-bom',
+          component: () => import('@/views/invoice/PendingInvoiceView.vue'),
+          meta: { title: '待开票清单-BOM采购' },
+        },
+        {
+          path: 'invoice/settlement/create',
+          name: 'invoice-settlement-create',
+          component: () => import('@/views/invoice/SettlementCreateView.vue'),
+          meta: { title: '创建结算单' },
+        },
+        {
+          path: 'invoice/settlement/list',
+          name: 'invoice-settlement-list',
+          component: () => import('@/views/invoice/SettlementListView.vue'),
+          meta: { title: '结算单列表' },
+        },
+        {
           path: 'documentation',
           name: 'documentation',
           component: () => import('@/views/OrderDocumentationView.vue'),

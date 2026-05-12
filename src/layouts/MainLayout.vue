@@ -67,6 +67,18 @@
           <a-menu-item key="/shipments">
             <router-link to="/shipments">发运管理</router-link>
           </a-menu-item>
+          <a-sub-menu key="/invoice">
+            <template #title>供应商开票</template>
+            <a-menu-item key="/invoice/pending/general">
+              <router-link to="/invoice/pending/general">一般采购</router-link>
+            </a-menu-item>
+            <a-menu-item key="/invoice/pending/bom">
+              <router-link to="/invoice/pending/bom">BOM采购</router-link>
+            </a-menu-item>
+            <a-menu-item key="/invoice/settlement/list">
+              <router-link to="/invoice/settlement/list">结算单列表</router-link>
+            </a-menu-item>
+          </a-sub-menu>
           <a-menu-item key="/profile">
             <router-link to="/profile">个人信息</router-link>
           </a-menu-item>
@@ -105,6 +117,7 @@ const menuSelectedKeys = computed(() => {
   if (p.startsWith('/asn/create')) return ['/asn/create']
   if (p.startsWith('/asn')) return ['/asn']
   if (p.startsWith('/shipments')) return ['/shipments']
+  if (p.startsWith('/invoice')) return ['/invoice']
   if (p.startsWith('/profile')) return ['/profile']
   if (p.startsWith('/documentation')) return ['/documentation']
   if (p.startsWith('/order-management-')) {
