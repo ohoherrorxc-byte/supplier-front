@@ -60,7 +60,7 @@
     </a-table>
 
     <!-- 底部操作栏 -->
-    <div style="margin-top: 16px; display: flex; justify-content: space-between">
+    <!-- <div style="margin-top: 16px; display: flex; justify-content: space-between">
       <div>
         <span style="color: #666">
           已选择 {{ selectedRows.length }} 条，合计金额：
@@ -72,7 +72,7 @@
           生成结算单
         </a-button>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

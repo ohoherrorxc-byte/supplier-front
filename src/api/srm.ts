@@ -541,6 +541,7 @@ export async function createSettlementOrder(params: {
   createDept?: string
   acceptDetailIds: number[]
   invoiceLines: JsonMap[]
+  completionFiles?: { id: number; name: string; url: string }[]
 }) {
   const { data } = await http.post<{ settlementId: number; settlementNo: string; message: string }>('/invoice/settlement', params)
   return data
@@ -560,7 +561,7 @@ export async function listSettlementOrders(params: {
 
 // 结算单明细
 export async function getSettlementDetails(settlementId: string) {
-  const { data } = await http.get<{ invoiceLines: JsonMap[]; details: JsonMap[] }>(`/invoice/settlement/${settlementId}`)
+  const { data } = await http.get<{ invoiceLines: JsonMap[]; details: JsonMap[]; completionFiles: JsonMap[]; remark: string }>(`/invoice/settlement/${settlementId}`)
   return data
 }
 

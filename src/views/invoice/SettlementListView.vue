@@ -90,6 +90,21 @@
           </template>
         </template>
       </a-table>
+
+      <!-- 完工单附件 -->
+      <div v-if="completionFileList.length > 0" style="margin-top: 16px">
+        <div style="font-weight: bold; margin-bottom: 8px">完工单附件：</div>
+        <div v-for="file in completionFileList" :key="file.id">
+          <a href="javascript:void(0)" @click="downloadFile(file.url, file.name)">{{ file.name }}</a>
+        </div>
+        <div v-if="completionFileList.length === 0" style="color: #999">无</div>
+      </div>
+
+      <!-- 备注 -->
+      <div v-if="settlementRemark" style="margin-top: 16px">
+        <div style="font-weight: bold; margin-bottom: 8px">备注：</div>
+        <div>{{ settlementRemark }}</div>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -107,6 +122,8 @@ const loading = ref(false)
 const dataList = ref<any[]>([])
 const invoiceList = ref<any[]>([])
 const detailList = ref<any[]>([])
+const completionFileList = ref<any[]>([])
+const settlementRemark = ref('')
 const detailModalVisible = ref(false)
 const currentDetail = ref<any>(null)
 
@@ -138,6 +155,7 @@ const invoiceColumns = [
   { title: '项目名称', dataIndex: 'projectName', key: 'projectName', width: 150 },
   { title: '零件号', dataIndex: 'partNo', key: 'partNo', width: 120 },
   { title: '税率', dataIndex: 'taxRate', key: 'taxRate', width: 80 },
+  { title: '金额(不含税)', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
   { title: '税额', dataIndex: 'taxAmount', key: 'taxAmount', width: 100, align: 'right' },
   { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right' },
   { title: '附件', key: 'attachment', width: 120 }
@@ -214,6 +232,8 @@ async function viewDetails(record: any) {
     const result = await getSettlementDetails(String(record.id))
     invoiceList.value = result.invoiceLines || []
     detailList.value = result.details || []
+    completionFileList.value = result.completionFiles || []
+    settlementRemark.value = result.remark || ''
     detailModalVisible.value = true
   } catch (e: any) {
     message.error(e.message || '加载明细失败')

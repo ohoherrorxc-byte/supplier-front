@@ -29,54 +29,65 @@
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'invoiceNo'">
-              <a-input v-model:value="record.invoiceNo" placeholder="发票号码" />
+              {{ record.invoiceNo }}
+              <!-- <a-input disabled v-model:value="record.invoiceNo" placeholder="发票号码" /> -->
             </template>
             <template v-else-if="column.key === 'invoiceDate'">
-              <a-date-picker
+              <!-- <a-date-picker disabled
                 v-model:value="record.invoiceDate"
                 format="YYYY-MM-DD"
                 placeholder="开票日期"
                 style="width: 100%"
-              />
+              /> -->
+              {{ record.invoiceDate ? dayjs(record.invoiceDate).format('YYYY-MM-DD') : '' }}
             </template>
             <template v-else-if="column.key === 'projectName'">
-              <a-input v-model:value="record.projectName" placeholder="项目名称" />
+              <!-- <a-input disabled v-model:value="record.projectName" placeholder="项目名称" /> -->
+              {{ record.projectName }}
             </template>
             <template v-else-if="column.key === 'partNo'">
-              <a-input v-model:value="record.partNo" placeholder="零件号" />
+              <!-- <a-input  disabled v-model:value="record.partNo" placeholder="零件号" /> -->
+              {{ record.partNo }}
             </template>
             <template v-else-if="column.key === 'taxRate'">
-              <a-input-number
+              <!-- <a-input-number disabled
                 v-model:value="record.taxRate"
                 :min="0"
                 :max="100"
                 style="width: 100%"
                 placeholder="税率"
-              />
+              /> -->
+              {{ record.taxRate }}%
             </template>
-            <template v-else-if="column.key === 'amountDetail'">
-              <span>
-                不含税：{{ (Number(record.totalAmount || 0) - Number(record.taxAmount || 0)).toFixed(2) }}，
-                税额：{{ Number(record.taxAmount || 0).toFixed(2) }}
-              </span>
+            <template v-else-if="column.key === 'amount'">
+              <!-- <a-input-number disabled
+                v-model:value="record.amount"
+                :min="0"
+                :precision="2"
+                style="width: 100%"
+                placeholder="金额(不含税)"
+              /> -->
+              {{ record.amount ? `¥${Number(record.amount).toFixed(2)}` : '' }}
             </template>
             <template v-else-if="column.key === 'taxAmount'">
-              <a-input-number
+              <!-- <a-input-number disabled
                 v-model:value="record.taxAmount"
                 :min="0"
                 :precision="2"
                 style="width: 100%"
                 placeholder="税额"
-              />
+              /> -->
+              {{ record.taxAmount ? `¥${Number(record.taxAmount).toFixed(2)}` : '' }}
             </template>
             <template v-else-if="column.key === 'totalAmount'">
-              <a-input-number
+              <!-- <a-input-number disabled
                 v-model:value="record.totalAmount"
                 :min="0"
                 :precision="2"
                 style="width: 100%"
                 placeholder="价税合计"
-              />
+              /> -->
+              {{ record.totalAmount ? `¥${Number(record.totalAmount).toFixed(2)}` : '' }}
             </template>
             <template v-else-if="column.key === 'fileName'">
               <a href="javascript:void(0)" v-if="record.fileUrl" @click="downloadFile(record.fileUrl, record.fileName)">
@@ -94,6 +105,10 @@
 
         <div v-if="ocrLoading" style="margin-top: 8px; color: #1890ff">
           <LoadingOutlined /> OCR识别中...
+        </div>
+
+        <div style="margin-top: 8px; color: #999; font-size: 12px">
+          提示：如发票识别有误，请联系IT工作人员
         </div>
 
         <!-- 发票汇总金额 -->
@@ -142,6 +157,23 @@
         </div>
       </a-card>
 
+      <!-- 完工单附件 -->
+      <a-card title="完工单附件" style="margin-bottom: 16px">
+        <a-upload
+          :before-upload="handleCompletionFileUpload"
+          :show-upload-list="true"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png"
+        >
+          <a-button type="primary">
+            <UploadOutlined /> 上传完工单
+          </a-button>
+        </a-upload>
+        <!-- <div style="margin-top: 8px; color: #999; font-size: 12px">
+          可上传多个文件（PDF、图片）
+        </div> -->
+      </a-card>
+
       <!-- 备注 -->
       <a-card title="备注" style="margin-bottom: 16px">
         <a-textarea v-model:value="remark" :rows="2" placeholder="可选填写备注信息" />
@@ -175,6 +207,7 @@ const submitting = ref(false)
 const ocrLoading = ref(false)
 const selectedDetails = ref<any[]>([])
 const remark = ref('')
+const completionFiles = ref<{ id: number; name: string; url: string }[]>([])
 
 interface InvoiceLine {
   key: string
@@ -183,11 +216,13 @@ interface InvoiceLine {
   projectName: string
   partNo: string
   taxRate: number
+  amount: number
   taxAmount: number
   totalAmount: number
   attachmentId: number | null
   fileName: string
-  fileUrl: string
+  fileUrl: string,
+  acceptApplyNo: string
 }
 
 const invoiceLines = ref<InvoiceLine[]>([])
@@ -198,8 +233,9 @@ const invoiceColumns = [
   { title: '项目名称', key: 'projectName', width: 120 },
   { title: '零件号', key: 'partNo', width: 100 },
   { title: '税率(%)', key: 'taxRate', width: 80 },
-  { title: '金额详情', key: 'amountDetail', width: 200 },
-  { title: '价税合计', key: 'totalAmount', width: 120 },
+  { title: '金额(不含税)', key: 'amount', width: 120, align: 'right' },
+  { title: '税额', key: 'taxAmount', width: 100, align: 'right' },
+  { title: '价税合计', key: 'totalAmount', width: 120, align: 'right' },
   { title: '附件', key: 'fileName', width: 150 },
   { title: '操作', key: 'action', width: 80 }
 ]
@@ -245,11 +281,13 @@ function addInvoiceLine() {
     projectName: '',
     partNo: '',
     taxRate: 13,
+    amount: 0,
     taxAmount: 0,
     totalAmount: 0,
     attachmentId: null,
     fileName: '',
-    fileUrl: ''
+    fileUrl: '',
+    acceptApplyNo: ''
   })
 }
 
@@ -269,7 +307,8 @@ async function handleFileUpload(file: File) {
 
     // 支持多张发票：invoiceResults 数组有多条则添加多条
     const results = result.invoiceResults || [result]
-    for (const r of results) {
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i]
       const newLine: InvoiceLine = {
         key: generateKey(),
         invoiceNo: r.invoiceNo || '',
@@ -277,11 +316,13 @@ async function handleFileUpload(file: File) {
         projectName: r.projectName || '',
         partNo: r.partNo || '',
         taxRate: r.taxRate || 13,
+        amount: r.amount || 0,
         taxAmount: r.taxAmount || 0,
         totalAmount: r.totalAmount || 0,
-        attachmentId,
-        fileName: uploadResult.name || file.name,
-        fileUrl: uploadResult.url || ''
+        attachmentId: attachmentId,
+        fileName: i === 0 ? (uploadResult.name || file.name) : '同上一张发票',
+        fileUrl: i === 0 ? (uploadResult.url || '') : '',
+        acceptApplyNo: selectedDetails.value[0]?.acceptApplyNo || ''
       }
       invoiceLines.value.push(newLine)
     }
@@ -291,6 +332,23 @@ async function handleFileUpload(file: File) {
     message.error(e.message || '处理失败')
   } finally {
     ocrLoading.value = false
+  }
+  return false // 阻止默认上传
+}
+
+async function handleCompletionFileUpload(file: File) {
+  try {
+    const uploadResult = await uploadFile(file, undefined, 'completionDoc')
+    if (uploadResult.success) {
+      completionFiles.value.push({
+        id: uploadResult.id,
+        name: uploadResult.name || file.name,
+        url: uploadResult.url || ''
+      })
+      message.success('上传成功')
+    }
+  } catch (e: any) {
+    message.error(e.message || '上传失败')
   }
   return false // 阻止默认上传
 }
@@ -362,7 +420,8 @@ async function doSubmit() {
       totalAmount: line.totalAmount,
       attachmentId: line.attachmentId,
       attachmentName: line.fileName,
-      attachmentUrl: line.fileUrl
+      attachmentUrl: line.fileUrl,
+      acceptApplyNo: line.acceptApplyNo
     }))
 
     const result = await createSettlementOrder({
@@ -371,7 +430,8 @@ async function doSubmit() {
       remark: remark.value,
       createDept: session.userId,
       acceptDetailIds,
-      invoiceLines: invoiceLinesData
+      invoiceLines: invoiceLinesData,
+      completionFiles: completionFiles.value.map(f => ({ id: f.id, name: f.name, url: f.url }))
     })
 
     message.success(result.message || '结算单创建成功')
