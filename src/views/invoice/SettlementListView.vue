@@ -37,6 +37,9 @@
         <template v-if="column.key === 'action'">
           <a @click="viewDetails(record)">查看明细</a>
         </template>
+        <template v-if="column.key === 'createTime'">
+          {{ formatDate(record.createTime) }}
+        </template>
       </template>
     </a-table>
 

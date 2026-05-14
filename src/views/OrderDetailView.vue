@@ -4,13 +4,13 @@
     <div class="global-actions" style="margin-bottom: 16px; text-align: right">
       <a-space>
         <a-button @click="$router.back()">返回</a-button>
-        <a-button
+        <!-- <a-button
           v-if="order?.supplier_order_status===0&& ( session.isSupplierClient)"
           type="primary"
           @click="handleSubmitOrder"
         >
           提交确认
-        </a-button>
+        </a-button> -->
       </a-space>
     </div>
 
@@ -27,7 +27,7 @@
 
               <!-- 订单管控信息 -->
               <a-descriptions-item label="系统订单号">{{ order.order_no }}</a-descriptions-item>
-              <a-descriptions-item label="订单日期">{{ formatDate(order.order_time as string) }}</a-descriptions-item>
+              <a-descriptions-item label="订单日期">{{ formatDate(order.order_date as string) }}</a-descriptions-item>
               <a-descriptions-item label="计划员">{{ order.plan_user_name || '-' }}</a-descriptions-item>
               <a-descriptions-item label="业务标识">{{ order.business_type || '量产' }}</a-descriptions-item>
 

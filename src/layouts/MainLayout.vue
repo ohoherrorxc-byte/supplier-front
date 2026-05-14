@@ -67,7 +67,7 @@
           <a-menu-item key="/shipments">
             <router-link to="/shipments">发运管理</router-link>
           </a-menu-item>
-          <a-sub-menu key="/invoice">
+          <!-- <a-sub-menu key="/invoice">
             <template #title>供应商开票</template>
             <a-menu-item key="/invoice/pending/general">
               <router-link to="/invoice/pending/general">一般采购</router-link>
@@ -78,7 +78,7 @@
             <a-menu-item key="/invoice/settlement/list">
               <router-link to="/invoice/settlement/list">结算单列表</router-link>
             </a-menu-item>
-          </a-sub-menu>
+          </a-sub-menu> -->
           <a-menu-item key="/profile">
             <router-link to="/profile">个人信息</router-link>
           </a-menu-item>

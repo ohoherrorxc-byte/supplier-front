@@ -60,19 +60,7 @@
     </a-table>
 
     <!-- 底部操作栏 -->
-    <!-- <div style="margin-top: 16px; display: flex; justify-content: space-between">
-      <div>
-        <span style="color: #666">
-          已选择 {{ selectedRows.length }} 条，合计金额：
-          <strong style="color: #1890ff; font-size: 16px">¥{{ totalSelectedAmount.toFixed(2) }}</strong>
-        </span>
-      </div>
-      <div>
-        <a-button type="primary" :disabled="selectedRows.length === 0" @click="onGenerateSettlement">
-          生成结算单
-        </a-button>
-      </div>
-    </div> -->
+
   </div>
 </template>
 

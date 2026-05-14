@@ -150,7 +150,7 @@ const etaDate = ref<Dayjs | undefined>(dayjs())
 const orderColumns: ColumnsType<JsonMap> = [
   { title: '订单号', dataIndex: 'order_no', key: 'order_no' },
   { title: '状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 90 },
-  { title: '订单日期', dataIndex: 'order_time', key: 'order_time', width: 170 },
+  { title: '订单日期', dataIndex: 'order_date', key: 'order_date', width: 170 },
 ]
 
 const splitColumns: ColumnsType<SplitRow> = [
