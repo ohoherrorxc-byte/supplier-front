@@ -177,11 +177,7 @@ const queryParams = reactive({
 })
 
 const factoryOptions = ref([
-  { label: '上海工厂 (SHPC)', value: 'SHPC' },
-  { label: '北京工厂 (BJPC)', value: 'BJPC' },
-  { label: '广州工厂 (GZPC)', value: 'GZPC' },
-  { label: '武汉工厂 (WHPC)', value: 'WHPC' },
-  { label: '重庆工厂 (CQPC)', value: 'CQPC' }
+ 
 ])
 
 const aggregatedData = ref<any[]>([])
@@ -263,6 +259,12 @@ async function handleAnalyze() {
 
     if (result.success) {
       aggregatedData.value = result.aggregatedData || []
+      // 将零件号23817611移到最后
+      aggregatedData.value.sort((a: any, b: any) => {
+        if (a.partsNumber === '23817611') return 1
+        if (b.partsNumber === '23817611') return -1
+        return 0
+      })
       renderChart(result.chartData || {})
       generateDynamicColumns(result.timeLabels || [])
     } else {
@@ -281,30 +283,7 @@ function generateMockData() {
   const timeLabels = ['2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06']
 
   aggregatedData.value = [
-    {
-      partsNumber: '26644565',
-      partsName: '制动盘',
-      address: 'SHPC',
-      '2024-01': 1500,
-      '2024-02': 1800,
-      '2024-03': 1200,
-      '2024-04': 2000,
-      '2024-05': 1600,
-      '2024-06': 1900,
-      total: 10000
-    },
-    {
-      partsNumber: '12171083',
-      partsName: '刹车片',
-      address: 'BJPC',
-      '2024-01': 800,
-      '2024-02': 900,
-      '2024-03': 1100,
-      '2024-04': 750,
-      '2024-05': 1000,
-      '2024-06': 850,
-      total: 5400
-    }
+    
   ]
 
   generateDynamicColumns(timeLabels)
@@ -312,14 +291,7 @@ function generateMockData() {
   const chartData = {
     xAxis: timeLabels,
     series: [
-      {
-        name: '26644565 (SHPC)',
-        data: [1500, 1800, 1200, 2000, 1600, 1900]
-      },
-      {
-        name: '12171083 (BJPC)',
-        data: [800, 900, 1100, 750, 1000, 850]
-      }
+      
     ]
   }
   renderChart(chartData)
@@ -366,15 +338,14 @@ function renderChart(chartData: any) {
 
     chartInstance.value = echarts.init(chartRef.value)
 
+    console.log('chartData:', chartData)
+
     const option: EChartsOption = {
       tooltip: {
-        trigger: 'axis',
-        formatter: (params: any) => {
-          let result = params[0].axisValue + '<br/>'
-          params.forEach((param: any) => {
-            result += `${param.seriesName}: ${param.value.toLocaleString()}<br/>`
-          })
-          return result
+        trigger: 'item',
+        formatter: function(params: any) {
+          if (!params) return ''
+          return params.seriesName + '<br/>' + params.value
         }
       },
       legend: {
@@ -400,7 +371,13 @@ function renderChart(chartData: any) {
         name: s.name,
         type: 'line',
         data: s.data,
-        smooth: true
+        smooth: true,
+        showSymbol: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        itemStyle: {
+          borderWidth: 2
+        }
       })) || []
     }
 
