@@ -27,7 +27,7 @@
               <router-link to="/order-management-supplier-history">供应商历史</router-link>
             </a-menu-item>
             <a-menu-item key="/order-management">
-              <router-link to="/order-management">正式订单</router-link>
+              <router-link to="/order-management">采购订单</router-link>
             </a-menu-item>
             <!-- <a-menu-item key="/order-management-jit-orders">
               <router-link to="/order-management-jit-orders">国内 JIT</router-link>
@@ -36,7 +36,7 @@
               <router-link to="/order-management-sales-forecast">销售预测</router-link>
             </a-menu-item> -->
             <a-menu-item key="/order-management-purchase-plan">
-              <router-link to="/order-management-purchase-plan">需求预测</router-link>
+              <router-link to="/order-management-purchase-plan">预测</router-link>
             </a-menu-item>
           
             <!-- <a-menu-item key="/order-management-outsourcing">
@@ -67,7 +67,7 @@
           <a-menu-item key="/shipments">
             <router-link to="/shipments">发运管理</router-link>
           </a-menu-item>
-          <!-- <a-sub-menu key="/invoice">
+          <a-sub-menu key="/invoice">
             <template #title>供应商开票</template>
             <a-menu-item key="/invoice/pending/general">
               <router-link to="/invoice/pending/general">一般采购</router-link>
@@ -78,7 +78,7 @@
             <a-menu-item key="/invoice/settlement/list">
               <router-link to="/invoice/settlement/list">结算单列表</router-link>
             </a-menu-item>
-          </a-sub-menu> -->
+          </a-sub-menu>
           <a-menu-item key="/profile">
             <router-link to="/profile">个人信息</router-link>
           </a-menu-item>
