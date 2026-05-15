@@ -1,5 +1,5 @@
 import { st } from 'vue-router/dist/router-CWoNjPRp.mjs'
-import { http } from './client'
+import { getToken, http } from './client'
 import { md5 } from 'js-md5'
 
 export type JsonMap = Record<string, unknown>
@@ -36,6 +36,7 @@ export interface OrderQueryParams {
   orderNo?: string[]
   partsNumber?: string[]
   supplierOrderStatus?: number | number[]
+  deliveryStatus?: string[]
   startDate?: string
   endDate?: string
   limit?: number
@@ -59,6 +60,7 @@ export async function getOrderHeadersSummary(params: {
   orderNo?: string[]
   partsNumber?: string[]
   supplierOrderStatus?: number[]
+  deliveryStatus?: string[]
   startDate?: string
   endDate?: string
 }) {
@@ -449,12 +451,14 @@ export async function exportSupplierHistory(params: {
   demandFactories: string[]
   partsNumbers: string[]
 }) {
+  const token = getToken()
   const response = await fetch('/api/v1/forecast/supplier-history/export', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(params)
+    body: JSON.stringify(params),
   })
 
   if (!response.ok) {

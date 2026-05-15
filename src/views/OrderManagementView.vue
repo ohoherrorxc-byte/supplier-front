@@ -41,6 +41,19 @@
                  <!-- <a-select-option :value="90">已驳回</a-select-option> -->
               </a-select>
             </a-form-item>
+            <a-form-item label="交付状态">
+              <a-select
+                v-model:value="queryParams.deliveryStatus"
+                placeholder="选择交付状态"
+                style="width: 100%"
+                mode="multiple"
+                allow-clear
+              >
+                <a-select-option value="未交付">未交付</a-select-option>
+                <a-select-option value="部分交付">部分交付</a-select-option>
+                <a-select-option value="已交付">已交付</a-select-option>
+              </a-select>
+            </a-form-item>
             <a-form-item label="日期范围">
               <a-range-picker 
                 v-model:value="queryParams.dateRange" 
@@ -50,7 +63,7 @@
             </a-form-item>
             <a-form-item>
               <a-space style="width: 100%; justify-content: space-between;">
-                <a-button type="primary"  @click="handleSearch">查询</a-button>
+                <a-button type="primary"  @click="handleQuery">查询</a-button>
                 <a-button  @click="handleReset">重置</a-button>
               </a-space>
             </a-form-item>
@@ -291,6 +304,7 @@ const queryParams = reactive({
   orderNo: '',
   partsNumber: '',
   supplierOrderStatus: initStatus ? [parseInt(initStatus)] : [] as number[],
+  deliveryStatus: [] as string[],
   dateRange: null as any
 })
 
@@ -418,22 +432,24 @@ function getStatusText(record: any) {
   return textMap[status] || '待确认'
 }
 
-function getDeliveryStatusColor(status: number) {
-  const colorMap: Record<number, string> = {
-    0: 'default',
-    25: 'orange',
-    30: 'green'
+function getDeliveryStatusColor(status: string | number | null | undefined) {
+  const key = status != null && status !== '' ? String(status).trim() : ''
+  const colorMap: Record<string, string> = {
+    未交付: 'default',
+    部分交付: 'orange',
+    已交付: 'green'
   }
-  return colorMap[status] || 'default'
+  return colorMap[key] || 'default'
 }
 
-function getDeliveryStatusText(status: number) {
-  const textMap: Record<number, string> = {
-    0: '未交付',
-    25: '部分交付',
-    30: '已交付'
+function getDeliveryStatusText(status: string | number | null | undefined) {
+  const key = status != null && status !== '' ? String(status).trim() : ''
+  const textMap: Record<string, string> = {
+    未交付: '未交付',
+    部分交付: '部分交付',
+    已交付: '已交付'
   }
-  return textMap[status] || '未交付'
+  return textMap[key] || '未交付'
 }
 
 function parseBatchInput(input: string): string[] {
@@ -451,6 +467,13 @@ function handleTabChange(key: string) {
   orderListSelectedRows.value = []
   orderDetailListSelectedRowKeys.value = []
   orderDetailListSelectedRows.value = []
+  pagination.current = 1
+  handleSearch()
+}
+
+/** 点击「查询」时回到第一页，避免翻页后按订单号筛选 offset 过大导致列表为空 */
+function handleQuery() {
+  pagination.current = 1
   handleSearch()
 }
 
@@ -466,6 +489,8 @@ async function handleSearch() {
     const startDate = queryParams.dateRange?.[0] || ''
     const endDate = queryParams.dateRange?.[1] || ''
     
+    const deliveryStatuses = queryParams.deliveryStatus.length > 0 ? queryParams.deliveryStatus : undefined
+    
     let result
     if (activeTab.value === 'order-list') {
       // 订单列表（按订单号）：使用订单纬度的接口
@@ -473,6 +498,7 @@ async function handleSearch() {
         userId: session.userId.toString(),
         orderNo: orderNos.length > 0 ? orderNos : undefined,
         supplierOrderStatus: queryParams.supplierOrderStatus.length > 0 ? queryParams.supplierOrderStatus : undefined,
+        deliveryStatus: deliveryStatuses,
         startDate,
         endDate,
         limit: pagination.pageSize,
@@ -482,6 +508,7 @@ async function handleSearch() {
         userId: session.userId.toString(),
         orderNo: orderNos.length > 0 ? orderNos : undefined,
         supplierOrderStatus: queryParams.supplierOrderStatus.length > 0 ? queryParams.supplierOrderStatus : undefined,
+        deliveryStatus: deliveryStatuses,
         startDate,
         endDate,
         limit: pagination.pageSize,
@@ -508,6 +535,7 @@ async function handleSearch() {
         orderNo: orderNos.length > 0 ? orderNos : undefined,
         partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
         supplierOrderStatus: queryParams.supplierOrderStatus.length > 0 ? queryParams.supplierOrderStatus : undefined,
+        deliveryStatus: deliveryStatuses,
         startDate,
         endDate,
         limit: pagination.pageSize,
@@ -538,6 +566,7 @@ async function handleSearch() {
           orderNo: orderNos.length > 0 ? orderNos : undefined,
           partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
           supplierOrderStatus: queryParams.supplierOrderStatus.length > 0 ? queryParams.supplierOrderStatus : undefined,
+          deliveryStatus: deliveryStatuses,
           startDate,
           endDate
         })
@@ -568,6 +597,7 @@ function handleReset() {
   queryParams.orderNo = ''
   queryParams.partsNumber = ''
   queryParams.supplierOrderStatus = []
+  queryParams.deliveryStatus = []
   queryParams.dateRange = null
   pagination.current = 1
   pagination.sortField = undefined
@@ -710,6 +740,7 @@ async function handleExport() {
       orderNo: orderNos.length > 0 ? orderNos : undefined,
       partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
       supplierOrderStatus: queryParams.supplierOrderStatus.length > 0 ? queryParams.supplierOrderStatus : undefined,
+      deliveryStatus: queryParams.deliveryStatus.length > 0 ? queryParams.deliveryStatus : undefined,
       startDate,
       endDate,
       limit: 10000,
