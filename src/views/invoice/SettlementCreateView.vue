@@ -164,7 +164,7 @@
       </a-card>
 
       <!-- 完工单附件 -->
-      <a-card title="完工单附件" style="margin-bottom: 16px">
+      <a-card title="账单/完工单附件" style="margin-bottom: 16px">
         <a-upload
           :before-upload="handleCompletionFileUpload"
           :show-upload-list="true"
@@ -172,12 +172,23 @@
           accept=".pdf,.jpg,.jpeg,.png"
         >
           <a-button type="primary">
-            <UploadOutlined /> 上传完工单
+            <UploadOutlined /> 上传账单/完工单
           </a-button>
         </a-upload>
-        <!-- <div style="margin-top: 8px; color: #999; font-size: 12px">
-          可上传多个文件（PDF、图片）
-        </div> -->
+      </a-card>
+
+      <!-- 订单附件 -->
+      <a-card title="订单附件" style="margin-bottom: 16px">
+        <a-upload
+          :before-upload="handleOrderFileUpload"
+          :show-upload-list="true"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
+        >
+          <a-button type="primary">
+            <UploadOutlined /> 上传订单附件
+          </a-button>
+        </a-upload>
       </a-card>
 
       <!-- 备注 -->
@@ -214,6 +225,7 @@ const ocrLoading = ref(false)
 const selectedDetails = ref<any[]>([])
 const remark = ref('')
 const completionFiles = ref<{ id: number; name: string; url: string }[]>([])
+const orderFiles = ref<{ id: number; name: string; url: string }[]>([])
 
 interface InvoiceLine {
   key: string
