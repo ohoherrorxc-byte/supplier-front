@@ -49,6 +49,12 @@
               <!-- <a-input  disabled v-model:value="record.partNo" placeholder="零件号" /> -->
               {{ record.partNo }}
             </template>
+            <template v-else-if="column.key === 'quantity'">
+              {{ record.quantity || 0 }}
+            </template>
+            <template v-else-if="column.key === 'unit'">
+              {{ record.unit || '' }}
+            </template>
             <template v-else-if="column.key === 'taxRate'">
               <!-- <a-input-number disabled
                 v-model:value="record.taxRate"
@@ -215,6 +221,8 @@ interface InvoiceLine {
   invoiceDate: any
   projectName: string
   partNo: string
+  quantity: number
+  unit: string
   taxRate: number
   amount: number
   taxAmount: number
@@ -232,6 +240,8 @@ const invoiceColumns = [
   { title: '开票日期', key: 'invoiceDate', width: 120 },
   { title: '项目名称', key: 'projectName', width: 120 },
   { title: '零件号', key: 'partNo', width: 100 },
+  { title: '数量', key: 'quantity', width: 80, align: 'right' },
+  { title: '单位', key: 'unit', width: 60 },
   { title: '税率(%)', key: 'taxRate', width: 80 },
   { title: '金额(不含税)', key: 'amount', width: 120, align: 'right' },
   { title: '税额', key: 'taxAmount', width: 100, align: 'right' },
@@ -242,13 +252,13 @@ const invoiceColumns = [
 
 const detailColumns = [
  
-  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 250 },
-  
-  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark' ,width: 250},
-   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo'},
-  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 240 },
+  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 180 },
+  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark' ,width: 180},
+   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120},
+  { title: '单位', dataIndex: 'unitName', key: 'unitName', width: 60},
+  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 180 },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
-  { title: '金额', dataIndex: 'amount', key: 'amount', width: 200, align: 'right' }
+  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' }
 ]
 
 const totalDetailAmount = computed(() => {
@@ -315,6 +325,8 @@ async function handleFileUpload(file: File) {
         invoiceDate: r.invoiceDate ? dayjs(r.invoiceDate) : null,
         projectName: r.projectName || '',
         partNo: r.partNo || '',
+        quantity: r.quantity || 0,
+        unit: r.unit || '',
         taxRate: r.taxRate || 13,
         amount: r.amount || 0,
         taxAmount: r.taxAmount || 0,

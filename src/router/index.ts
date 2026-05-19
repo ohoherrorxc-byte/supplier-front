@@ -99,7 +99,7 @@ const router = createRouter({
           path: 'invoice/pending/bom',
           name: 'invoice-pending-bom',
           component: () => import('@/views/invoice/PendingInvoiceView.vue'),
-          meta: { title: '待开票清单-BOM采购' },
+          meta: { title: '待开票清单-生产采购' },
         },
         {
           path: 'invoice/settlement/create',

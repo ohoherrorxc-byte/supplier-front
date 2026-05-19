@@ -4,7 +4,7 @@
 
     <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
       <a-tab-pane key="general" tab="一般采购" />
-      <a-tab-pane key="bom" tab="BOM采购" />
+      <a-tab-pane key="bom" tab="生产采购" />
     </a-tabs>
 
     <!-- 顶部操作栏 -->
