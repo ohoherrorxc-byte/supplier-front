@@ -47,7 +47,7 @@
     <a-modal
       v-model:open="detailModalVisible"
       title="结算单明细"
-      width="900px"
+      width="1000px"
     >
       <template #footer>
         <a-button @click="detailModalVisible = false">关闭</a-button>
@@ -60,15 +60,28 @@
         :pagination="false"
         row-key="id"
         size="small"
-        style="margin-bottom: 16px"
+        :scroll="{ x: 900 }"
+        style="margin-bottom: 16px; overflow-x: auto"
       >
         <template #title>发票明细</template>
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'quantity'">
+            {{ record.quantity != null ? Number(record.quantity).toFixed(2) : '-' }}
+          </template>
+          <template v-if="column.key === 'unit'">
+            {{ record.unit || '-' }}
+          </template>
+          <template v-if="column.key === 'taxRate'">
+            {{ record.taxRate != null ? record.taxRate + '%' : '-' }}
+          </template>
+          <template v-if="column.key === 'amount'">
+            {{ record.amount != null ? '¥' + Number(record.amount).toFixed(2) : '-' }}
+          </template>
           <template v-if="column.key === 'taxAmount'">
-            {{ Number(record.taxAmount || 0).toFixed(2) }}
+            {{ record.taxAmount != null ? '¥' + Number(record.taxAmount).toFixed(2) : '-' }}
           </template>
           <template v-if="column.key === 'totalAmount'">
-            {{ Number(record.totalAmount || 0).toFixed(2) }}
+            {{ record.totalAmount != null ? '¥' + Number(record.totalAmount).toFixed(2) : '-' }}
           </template>
           <template v-if="column.key === 'attachment'">
             <a v-if="record.attachmentUrl" href="javascript:void(0)" @click="downloadFile(record.attachmentUrl, record.attachmentName)">{{ record.attachmentName || '下载附件' }}</a>
@@ -86,10 +99,13 @@
         <template #title>验收明细</template>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'quantity'">
-            {{ Number(record.quantity || 0).toFixed(2) }}
+            {{ record.quantity != null ? Number(record.quantity).toFixed(2) : '-' }}
+          </template>
+          <template v-if="column.key === 'unit'">
+            {{ record.unit || '-' }}
           </template>
           <template v-if="column.key === 'amount'">
-            {{ Number(record.amount || 0).toFixed(2) }}
+            {{ record.amount != null ? '¥' + Number(record.amount).toFixed(2) : '-' }}
           </template>
         </template>
       </a-table>
@@ -154,23 +170,25 @@ const columns = [
 
 const invoiceColumns = [
   { title: '发票号码', dataIndex: 'invoiceNo', key: 'invoiceNo', width: 140 },
-  { title: '开票日期', dataIndex: 'invoiceDate', key: 'invoiceDate', width: 120 },
-  { title: '项目名称', dataIndex: 'projectName', key: 'projectName', width: 150 },
-  { title: '零件号', dataIndex: 'partNo', key: 'partNo', width: 120 },
-  { title: '税率', dataIndex: 'taxRate', key: 'taxRate', width: 80 },
-  { title: '金额(不含税)', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
-  { title: '税额', dataIndex: 'taxAmount', key: 'taxAmount', width: 100, align: 'right' },
-  { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, align: 'right' },
-  { title: '附件', key: 'attachment', width: 120 }
+  { title: '开票日期', dataIndex: 'invoiceDate', key: 'invoiceDate', width: 100 },
+  { title: '品名', dataIndex: 'projectName', key: 'projectName', width: 150 },
+  { title: '零件号', dataIndex: 'partNo', key: 'partNo', width: 100 },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70, align: 'right' },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 50 },
+  { title: '税率', dataIndex: 'taxRate', key: 'taxRate', width: 50 },
+  { title: '金额(不含税)', dataIndex: 'amount', key: 'amount', width: 100, align: 'right' },
+  { title: '税额', dataIndex: 'taxAmount', key: 'taxAmount', width: 80, align: 'right' },
+  { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', width: 100, align: 'right' },
+  { title: '附件', key: 'attachment', width: 80 }
 ]
 
 const detailColumns = [
-  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 200 },
-  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 250 },
-  { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
-  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 200 },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
-  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
+  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 160 },
+  { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 100 },
+  { title: '单位', dataIndex: 'unit', key: 'unit', width: 50 },
+  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
+  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70, align: 'right' },
+  { title: '金额', dataIndex: 'amount', key: 'amount', width: 100, align: 'right' },
 ]
 
 function statusText(status: number) {

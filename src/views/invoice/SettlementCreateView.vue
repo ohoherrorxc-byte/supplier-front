@@ -197,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile } from '@/api/srm'
@@ -238,7 +238,7 @@ const invoiceLines = ref<InvoiceLine[]>([])
 const invoiceColumns = [
   { title: '发票号码', key: 'invoiceNo', width: 120 },
   { title: '开票日期', key: 'invoiceDate', width: 120 },
-  { title: '项目名称', key: 'projectName', width: 120 },
+  { title: '品名', key: 'projectName', width: 120 },
   { title: '零件号', key: 'partNo', width: 100 },
   { title: '数量', key: 'quantity', width: 80, align: 'right' },
   { title: '单位', key: 'unit', width: 60 },
@@ -410,6 +410,37 @@ async function onSubmit() {
     return
   }
 
+  // 校验发票条目数必须与验收明细条目数一致（逐条对应）
+  if (invoiceLines.value.length !== selectedDetails.value.length) {
+    message.warning(`发票条目数(${invoiceLines.value.length})与验收明细条目数(${selectedDetails.value.length})不一致，请核实后再提交`)
+    return
+  }
+
+  // 逐条校验：品名、数量、单位、价税合计必须一致
+  for (let i = 0; i < invoiceLines.value.length; i++) {
+    const invoice = invoiceLines.value[i]
+    const detail = selectedDetails.value[i]
+    const errors: string[] = []
+
+    if (invoice.projectName && detail.partsName && invoice.projectName !== detail.partsName) {
+      errors.push(`品名(${invoice.projectName}≠${detail.partsName})`)
+    }
+    if (Number(invoice.quantity || 0) !== Number(detail.quantity || 0)) {
+      errors.push(`数量(${invoice.quantity}≠${detail.quantity})`)
+    }
+    if (invoice.unit && detail.unitName && invoice.unit !== detail.unitName) {
+      errors.push(`单位(${invoice.unit}≠${detail.unitName})`)
+    }
+    if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+      errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+    }
+
+    if (errors.length > 0) {
+      message.warning(`第${i + 1}条发票与验收明细不一致: ${errors.join(', ')}`)
+      return
+    }
+  }
+
   doSubmit()
 }
 
@@ -427,7 +458,10 @@ async function doSubmit() {
       invoiceDate: line.invoiceDate ? dayjs(line.invoiceDate).format('YYYY-MM-DD') : null,
       projectName: line.projectName,
       partNo: line.partNo,
+      quantity: line.quantity,
+      unit: line.unit,
       taxRate: line.taxRate,
+      amount: line.amount,
       taxAmount: line.taxAmount,
       totalAmount: line.totalAmount,
       attachmentId: line.attachmentId,
