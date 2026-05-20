@@ -50,6 +50,9 @@
         <template v-if="column.key === 'quantity'">
           {{ Number(record.quantity || 0).toFixed(2) }}
         </template>
+        <template v-if="column.key === 'projectName'">
+          {{ record.projectName || '-' }}
+        </template>
         <template v-if="column.key === 'amount'">
           {{ Number(record.amount || 0).toFixed(2) }}
         </template>
@@ -98,14 +101,13 @@ const pagination = reactive({
 const columns = [
   { title: '选择', key: 'selection', width: 60 },
   { title: '验收申请编号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
+  { title: '项目名称', dataIndex: 'projectName', key: 'projectName', width: 180 },
   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
   { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 180 },
   { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 220 },
   { title: '订单号', dataIndex: 'contractNo', key: 'contractNo', width: 150 },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' },
   { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' },
-  { title: '供应商编号', dataIndex: 'supplierNo', key: 'supplierNo', width: 120 },
-  { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 200 },
   { title: '验收日期', dataIndex: 'acceptDate', key: 'acceptDate', width: 120 }
 ]
 

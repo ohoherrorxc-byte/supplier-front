@@ -128,6 +128,16 @@
 
       <!-- 关联验收明细 -->
       <a-card title="关联验收明细" style="margin-bottom: 16px">
+        <div v-if="selectedDetails.length > 0" style="margin-bottom: 12px; padding: 8px 12px; background: #f5f5f5; border-radius: 4px; display: flex; gap: 24px;">
+          <div>
+            <span style="font-weight: 500;">项目名称：</span>
+            <span>{{ selectedDetails[0]?.projectName || '-' }}</span>
+          </div>
+          <div v-if="selectedDetails[0]?.acceptDate">
+            <span style="font-weight: 500;">验收归档时间：</span>
+            <span>{{ dayjs(selectedDetails[0].acceptDate).format('YYYY-MM-DD') }}</span>
+          </div>
+        </div>
         <a-table
           :columns="detailColumns"
           :data-source="selectedDetails"
@@ -144,6 +154,8 @@
             </template>
           </template>
         </a-table>
+
+       
 
         <!-- 金额汇总 -->
         <div style="margin-top: 16px; text-align: right; font-size: 16px">
@@ -164,7 +176,11 @@
       </a-card>
 
       <!-- 完工单附件 -->
-      <a-card title="账单/完工单附件" style="margin-bottom: 16px">
+      <a-card style="margin-bottom: 16px">
+        <template #title>
+          <span>账单/完工单附件</span>
+          <span v-if="isCompletionRequired" style="color: #ff4d4f"> *</span>
+        </template>
         <a-upload
           :before-upload="handleCompletionFileUpload"
           :show-upload-list="true"
@@ -178,7 +194,11 @@
       </a-card>
 
       <!-- 订单附件 -->
-      <a-card title="订单附件" style="margin-bottom: 16px">
+      <a-card style="margin-bottom: 16px">
+        <template #title>
+          <span>订单附件</span>
+          <span v-if="isOrderRequired" style="color: #ff4d4f"> *</span>
+        </template>
         <a-upload
           :before-upload="handleOrderFileUpload"
           :show-upload-list="true"
@@ -226,6 +246,19 @@ const selectedDetails = ref<any[]>([])
 const remark = ref('')
 const completionFiles = ref<{ id: number; name: string; url: string }[]>([])
 const orderFiles = ref<{ id: number; name: string; url: string }[]>([])
+
+const orderType = computed(() => selectedDetails.value[0]?.purchaseOrderType || '')
+console.log('订单类型:', orderType.value)
+console.log('选中明细:', selectedDetails.value) 
+
+const isCompletionRequired = computed(() => {
+  const ot = orderType.value
+  return ot === '服务类' || ot === '开发费及其他' || ot === '其他'
+})
+const isOrderRequired = computed(() => {
+  const ot = (orderType.value || '').toLowerCase()
+  return ot.includes('license') || ot.includes('lisence')
+})
 
 interface InvoiceLine {
   key: string
@@ -310,6 +343,7 @@ function addInvoiceLine() {
     fileName: '',
     fileUrl: '',
     acceptApplyNo: ''
+    
   })
 }
 
@@ -377,6 +411,23 @@ async function handleCompletionFileUpload(file: File) {
   return false // 阻止默认上传
 }
 
+async function handleOrderFileUpload(file: File) {
+  try {
+    const uploadResult = await uploadFile(file, undefined, 'orderDoc')
+    if (uploadResult.success) {
+      orderFiles.value.push({
+        id: uploadResult.id,
+        name: uploadResult.name || file.name,
+        url: uploadResult.url || ''
+      })
+      message.success('上传成功')
+    }
+  } catch (e: any) {
+    message.error(e.message || '上传失败')
+  }
+  return false // 阻止默认上传
+}
+
 async function onSubmit() {
   if (invoiceLines.value.length === 0) {
     message.warning('请上传至少一张发票')
@@ -428,29 +479,75 @@ async function onSubmit() {
     return
   }
 
-  // 逐条校验：品名、数量、单位、价税合计必须一致
+  // 获取订单类型：硬件PO订单、License、开发费及其他
+  const orderTypeStr = selectedDetails.value[0]?.purchaseOrderType || ''
+
+  // 逐条校验：根据订单类型进行不同校验
   for (let i = 0; i < invoiceLines.value.length; i++) {
     const invoice = invoiceLines.value[i]
     const detail = selectedDetails.value[i]
     const errors: string[] = []
 
-    if (invoice.projectName && detail.partsName && invoice.projectName !== detail.partsName) {
-      errors.push(`品名(${invoice.projectName}≠${detail.partsName})`)
+    // 硬件PO订单：严格校验（品名、数量、单位、税后金额）
+    if (orderTypeStr === '硬件PO订单') {
+      if (invoice.projectName && detail.partsName && invoice.projectName !== detail.partsName) {
+        errors.push(`品名(${invoice.projectName}≠${detail.partsName})`)
+      }
+      if (Number(invoice.quantity || 0) !== Number(detail.quantity || 0)) {
+        errors.push(`数量(${invoice.quantity}≠${detail.quantity})`)
+      }
+      if (invoice.unit && detail.unitName && invoice.unit !== detail.unitName) {
+        errors.push(`单位(${invoice.unit}≠${detail.unitName})`)
+      }
+      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+      }
     }
-    if (Number(invoice.quantity || 0) !== Number(detail.quantity || 0)) {
-      errors.push(`数量(${invoice.quantity}≠${detail.quantity})`)
+    // License：校验条目数、总额，但不校验品名
+    else if (orderTypeStr === 'License') {
+      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+      }
     }
-    if (invoice.unit && detail.unitName && invoice.unit !== detail.unitName) {
-      errors.push(`单位(${invoice.unit}≠${detail.unitName})`)
-    }
-    if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-      errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+    // 开发费及其他：不校验品名和条目数，只校验总额
+    else {
+      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+      }
     }
 
     if (errors.length > 0) {
       message.warning(`第${i + 1}条发票与验收明细不一致: ${errors.join(', ')}`)
       return
     }
+  }
+
+  // 校验发票日期不能小于验收归档日期
+  const acceptDate = selectedDetails.value[0]?.acceptDate
+  if (acceptDate) {
+    const acceptDateStr = dayjs(acceptDate).format('YYYY-MM-DD')
+    for (let i = 0; i < invoiceLines.value.length; i++) {
+      const invoiceDateStr = invoiceLines.value[i].invoiceDate ? dayjs(invoiceLines.value[i].invoiceDate).format('YYYY-MM-DD') : null
+      if (invoiceDateStr && invoiceDateStr < acceptDateStr) {
+        message.warning(`第${i + 1}条开票日期(${invoiceDateStr})不能小于验收归档日期(${acceptDateStr})`)
+        return
+      }
+    }
+  }
+
+  // 附件要求校验
+  const ot = orderType.value || ''
+  const otLower = ot.toLowerCase()
+  console.log('附件校验 otLower:', otLower, 'orderFiles:', orderFiles.value.length)
+  if (otLower === 'lisence' || otLower.includes('lisence')) {
+    if (orderFiles.value.length === 0) {
+      message.warning('License类型验收单必须上传订单附件')
+      return
+    }
+  }
+  if ((ot === '服务类' || ot === '开发费及其他' || ot === '其他') && completionFiles.value.length === 0) {
+    message.warning('服务类类型验收单必须上传账单/完工单附件')
+    return
   }
 
   doSubmit()
@@ -489,7 +586,8 @@ async function doSubmit() {
       createDept: session.userId,
       acceptDetailIds,
       invoiceLines: invoiceLinesData,
-      completionFiles: completionFiles.value.map(f => ({ id: f.id, name: f.name, url: f.url }))
+      completionFiles: completionFiles.value.map(f => ({ id: f.id, name: f.name, url: f.url })),
+      orderFiles: orderFiles.value.map(f => ({ id: f.id, name: f.name, url: f.url }))
     })
 
     message.success(result.message || '结算单创建成功')
@@ -510,6 +608,7 @@ onMounted(() => {
   if (route.query.details) {
     try {
       selectedDetails.value = JSON.parse(route.query.details as string)
+      console.log('解析选中明细:', selectedDetails.value)
     } catch (e) {
       console.error('解析选中明细失败', e)
     }

@@ -112,11 +112,18 @@
 
       <!-- 完工单附件 -->
       <div v-if="completionFileList.length > 0" style="margin-top: 16px">
-        <div style="font-weight: bold; margin-bottom: 8px">完工单附件：</div>
+        <div style="font-weight: bold; margin-bottom: 8px">账单/完工单附件：</div>
         <div v-for="file in completionFileList" :key="file.id">
           <a href="javascript:void(0)" @click="downloadFile(file.url, file.name)">{{ file.name }}</a>
         </div>
-        <div v-if="completionFileList.length === 0" style="color: #999">无</div>
+      </div>
+
+      <!-- 订单附件 -->
+      <div v-if="orderFileList.length > 0" style="margin-top: 16px">
+        <div style="font-weight: bold; margin-bottom: 8px">订单附件：</div>
+        <div v-for="file in orderFileList" :key="file.id">
+          <a href="javascript:void(0)" @click="downloadFile(file.url, file.name)">{{ file.name }}</a>
+        </div>
       </div>
 
       <!-- 备注 -->
@@ -142,6 +149,7 @@ const dataList = ref<any[]>([])
 const invoiceList = ref<any[]>([])
 const detailList = ref<any[]>([])
 const completionFileList = ref<any[]>([])
+const orderFileList = ref<any[]>([])
 const settlementRemark = ref('')
 const detailModalVisible = ref(false)
 const currentDetail = ref<any>(null)
@@ -254,6 +262,7 @@ async function viewDetails(record: any) {
     invoiceList.value = result.invoiceLines || []
     detailList.value = result.details || []
     completionFileList.value = result.completionFiles || []
+    orderFileList.value = result.orderFiles || []
     settlementRemark.value = result.remark || ''
     detailModalVisible.value = true
   } catch (e: any) {
