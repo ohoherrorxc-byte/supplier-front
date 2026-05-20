@@ -554,9 +554,6 @@ async function onSubmit() {
 }
 
 async function doSubmit() {
-  console.log('=== doSubmit called ===')
-  console.log('selectedDetails:', selectedDetails.value)
-  console.log('invoiceLines:', invoiceLines.value)
   submitting.value = true
   try {
     const acceptDetailIds = selectedDetails.value.map(d => d.acceptDetailId)
