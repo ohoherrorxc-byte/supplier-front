@@ -193,6 +193,16 @@
         </a-upload>
       </a-card>
 
+      <!-- 完工单模版 -->
+      <a-card style="margin-bottom: 16px" v-if="isCompletionRequired">
+        <template #title>完工单模版</template>
+        <div style="text-align: center; padding: 20px">
+          <a-button type="link" @click="downloadCompletionTemplate">
+            <DownloadOutlined /> 点击下载完工单模版
+          </a-button>
+        </div>
+      </a-card>
+
       <!-- 订单附件 -->
       <a-card style="margin-bottom: 16px">
         <template #title>
@@ -233,7 +243,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
-import { LoadingOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { LoadingOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -598,6 +608,16 @@ async function doSubmit() {
 
 function onCancel() {
   router.back()
+}
+
+function downloadCompletionTemplate() {
+  const totalAmount = selectedDetails.value.reduce((sum, d) => sum + Number(d.amount || 0), 0).toFixed(2)
+  const contractNo = selectedDetails.value[0]?.contractNo || ''
+  const docTitle = selectedDetails.value[0]?.docTitle || '完工单'
+
+  // 调用后端API下载Word文档
+  const url = `/api/file/completion-slip-docx?docTitle=${encodeURIComponent(docTitle)}&acceptAmountRmb=${encodeURIComponent(totalAmount)}&contractNo=${encodeURIComponent(contractNo)}`
+  window.open(url, '_blank')
 }
 
 onMounted(() => {
