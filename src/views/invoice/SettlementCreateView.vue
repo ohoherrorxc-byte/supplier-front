@@ -191,14 +191,9 @@
             <UploadOutlined /> 上传账单/完工单
           </a-button>
         </a-upload>
-      </a-card>
-
-      <!-- 完工单模版 -->
-      <a-card style="margin-bottom: 16px" v-if="isCompletionRequired">
-        <template #title>完工单模版</template>
-        <div style="text-align: center; padding: 20px">
+        <div v-if="isCompletionRequired" style="margin-top: 12px; text-align: center; border-top: 1px dashed #ddd; padding-top: 12px">
           <a-button type="link" @click="downloadCompletionTemplate">
-            <DownloadOutlined /> 点击下载完工单模版
+            <DownloadOutlined /> 下载完工单模版
           </a-button>
         </div>
       </a-card>
@@ -613,7 +608,11 @@ function onCancel() {
 function downloadCompletionTemplate() {
   const totalAmount = selectedDetails.value.reduce((sum, d) => sum + Number(d.amount || 0), 0).toFixed(2)
   const contractNo = selectedDetails.value[0]?.contractNo || ''
-  const docTitle = selectedDetails.value[0]?.docTitle || '完工单'
+  const supplierName = selectedDetails.value[0]?.supplierName || ''
+
+  // 拼接零件名称
+  const partsNames = [...new Set(selectedDetails.value.map((d: any) => d.partsName).filter(Boolean))]
+  const docTitle = '上汽海外出行科技有限公司和' + supplierName + partsNames.join('，') + '服务完工单'
 
   // 调用后端API下载Word文档
   const url = `/api/file/completion-slip-docx?docTitle=${encodeURIComponent(docTitle)}&acceptAmountRmb=${encodeURIComponent(totalAmount)}&contractNo=${encodeURIComponent(contractNo)}`
