@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const isProd = mode === 'production'
-  const target = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:30158'
+  const target = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:30157'
 
   return {
     base: isProd ? '/supplier/' : '/',

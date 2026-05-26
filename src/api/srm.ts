@@ -537,6 +537,18 @@ export async function listPendingInvoiceBom(params: {
   return data
 }
 
+// 待开票数量统计
+export async function getPendingInvoiceCount(userId: string) {
+  const { data } = await http.get<{ general: number; bom: number; total: number }>('/invoice/pending/count', { params: { userId } })
+  return data
+}
+
+// 获取工作台消息列表
+export async function getDashboardMessages(userId: string) {
+  const { data } = await http.get<{ type: string; no: string; text: string }[]>('/invoice/dashboard/messages', { params: { userId } })
+  return data
+}
+
 // 创建结算单
 export async function createSettlementOrder(params: {
   userId: string

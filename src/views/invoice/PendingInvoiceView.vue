@@ -24,11 +24,17 @@
 
     <!-- 搜索表单 -->
     <a-form layout="inline" style="margin-bottom: 16px">
+      <a-form-item label="验收单编号">
+        <a-input v-model:value="searchForm.acceptApplyNo" placeholder="模糊搜索" style="width: 140px" />
+      </a-form-item>
+      <a-form-item label="订单号">
+        <a-input v-model:value="searchForm.orderNo" placeholder="模糊搜索" style="width: 140px" />
+      </a-form-item>
       <a-form-item label="零件号">
-        <a-input v-model:value="searchForm.partsNo" placeholder="模糊搜索" style="width: 160px" />
+        <a-input v-model:value="searchForm.partsNo" placeholder="模糊搜索" style="width: 140px" />
       </a-form-item>
       <a-form-item label="零件名称">
-        <a-input v-model:value="searchForm.partsName" placeholder="模糊搜索" style="width: 160px" />
+        <a-input v-model:value="searchForm.partsName" placeholder="模糊搜索" style="width: 140px" />
       </a-form-item>
       <a-form-item>
         <a-button type="primary" @click="loadData">查询</a-button>
@@ -86,6 +92,8 @@ const selectedRows = ref<any[]>([])
 const selectedRowKeys = ref<any[]>([])
 
 const searchForm = reactive({
+  acceptApplyNo: '',
+  orderNo: '',
   partsNo: '',
   partsName: ''
 })
@@ -102,6 +110,8 @@ const columns = [
   { title: '选择', key: 'selection', width: 60 },
   { title: '验收申请编号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
   { title: '项目名称', dataIndex: 'projectName', key: 'projectName', width: 180 },
+  { title: '供应商编号', dataIndex: 'supplierNo', key: 'supplierNo', width: 120 },
+  { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 180 },
   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
   { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 180 },
   { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 220 },
@@ -192,6 +202,8 @@ async function loadData() {
   try {
     const params = {
       userId: session.operatorUserId,
+      acceptApplyNo: searchForm.acceptApplyNo || undefined,
+      orderNo: searchForm.orderNo || undefined,
       partsNo: searchForm.partsNo || undefined,
       partsName: searchForm.partsName || undefined,
       pageSize: pagination.pageSize,
@@ -218,6 +230,8 @@ function handleTableChange(pag: any) {
 }
 
 function resetSearch() {
+  searchForm.acceptApplyNo = ''
+  searchForm.orderNo = ''
   searchForm.partsNo = ''
   searchForm.partsName = ''
   loadData()
