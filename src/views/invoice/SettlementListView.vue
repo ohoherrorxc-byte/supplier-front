@@ -203,8 +203,7 @@ function statusText(status: number) {
   const map: Record<number, string> = {
     0: '草稿',
     1: '已提交',
-    2: '已核准',
-    3: '已开票',
+    2: '已结算',
     4: '已付款'
   }
   return map[status] || '未知'
