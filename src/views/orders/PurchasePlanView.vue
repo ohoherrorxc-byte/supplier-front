@@ -1,40 +1,48 @@
 <template>
   <div class="purchase-plan-view">
-    <a-alert
+    <!-- <a-alert
       message="采购计划说明"
       description="采购计划为未来的周度排产意向，供应商必须在规定时间内填报【承诺可满足数量】。若承诺可满足数量小于计划量，系统将自动触发缺料预警。"
       type="warning"
       show-icon
       style="margin-bottom: 16px"
-    />
-
+    /> -->
     <a-layout style="background: #fff; padding: 16px; border-radius: 8px;">
       <!-- 左侧查询区域 -->
       <a-layout-sider width="300" style="background: #fafafa; padding: 16px; border-radius: 8px; margin-right: 16px;">
         <div class="query-section">
           <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 500;">查询条件</h3>
           <a-form :model="queryParams">
-            <a-form-item label="零件号">
-              <a-textarea 
-                v-model:value="queryParams.partsNumber" 
-                placeholder="请输入零件号，支持批量输入（换行或逗号分隔）" 
-                :rows="3"
-                allow-clear 
+            <a-form-item label="预测单号">
+              <a-textarea
+                v-model:value="queryParams.orderNo"
+                placeholder="请输入预测单号"
+                :rows="2"
+                allow-clear
                 style="width: 100%"
               />
             </a-form-item>
-            <a-form-item label="计划周期">
-              <a-range-picker 
-                v-model:value="queryParams.dateRange" 
+            <a-form-item label="零件号">
+              <a-textarea
+                v-model:value="queryParams.partsNumber"
+                placeholder="请输入零件号，支持批量输入（换行或逗号分隔）"
+                :rows="3"
+                allow-clear
+                style="width: 100%"
+              />
+            </a-form-item>
+            <a-form-item label="计划时间">
+              <a-range-picker
+                v-model:value="queryParams.dateRange"
                 picker="week"
                 format="YYYY-ww"
                 style="width: 100%"
               />
             </a-form-item>
             <a-form-item label="反馈状态">
-              <a-select 
-                v-model:value="queryParams.feedbackStatus" 
-                placeholder="选择状态" 
+              <a-select
+                v-model:value="queryParams.feedbackStatus"
+                placeholder="选择状态"
                 style="width: 100%"
                 allow-clear
               >
@@ -45,7 +53,7 @@
             </a-form-item>
             <a-form-item>
               <a-space style="width: 100%">
-                <a-button type="primary" @click="handleSearch" style="flex: 1;">查询</a-button>
+                <a-button type="primary" @click="handleQuery" style="flex: 1;">查询</a-button>
                 <a-button @click="handleReset" style="flex: 1;">重置</a-button>
               </a-space>
             </a-form-item>
@@ -57,150 +65,143 @@
       <a-layout-content style="flex: 1;">
         <div style="margin-bottom: 16px">
           <a-space>
-            <a-button 
-              type="primary" 
+            <!-- <a-button
+              type="primary"
               :disabled="selectedRowKeys.length === 0"
               @click="handleBatchFeedback"
             >
               批量反馈产能
-            </a-button>
+            </a-button> -->
             <a-button @click="handleExport">导出</a-button>
           </a-space>
         </div>
 
-        <a-table
-          :columns="columns"
-          :data-source="dataSource"
-          :loading="loading"
-          :row-selection="rowSelection"
-          :pagination="pagination"
-          :row-key="record => record.id"
-          @change="handleTableChange"
-          :scroll="{ x: 1500 }"
-        >
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'feedback_status'">
-              <a-tag :color="getFeedbackStatusColor(record.feedback_status)">
-                {{ getFeedbackStatusText(record.feedback_status) }}
-              </a-tag>
-            </template>
-            <template v-if="column.key === 'planned_qty'">
-              <span style="font-weight: 500; color: #1890ff">
-                {{ record.planned_qty }}
-              </span>
-            </template>
-            <template v-if="column.key === 'committed_qty'">
-              <span 
-                :style="{
-                  fontWeight: 500,
-                  color: record.committed_qty < record.planned_qty ? '#ff4d4f' : '#52c41a'
-                }"
-              >
-                {{ record.committed_qty || '-' }}
-              </span>
-            </template>
-            <template v-if="column.key === 'shortage_qty'">
-              <span v-if="record.shortage_qty > 0" style="color: #ff4d4f; font-weight: 500">
-                {{ record.shortage_qty }}
-              </span>
-              <span v-else style="color: #52c41a">-</span>
-            </template>
-            <template v-if="column.key === 'action'">
-              <a-space>
-                <a-button 
-                  v-if="record.feedback_status === 'pending'" 
-                  type="primary" 
-                  size="small"
-                  @click="handleFeedback(record)"
-                >
-                  反馈产能
-                </a-button>
-                <a-button 
-                  type="link" 
-                  size="small"
-                  @click="handleViewDetail(record)"
-                >
-                  查看详情
-                </a-button>
-              </a-space>
-            </template>
-          </template>
-        </a-table>
+        <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
+          <a-tab-pane key="forecast-list" tab="预测列表（按预测单号）">
+            <a-table
+              :columns="forecastListColumns"
+              :data-source="forecastListDataSource"
+              :loading="loading"
+              :row-selection="forecastListRowSelection"
+              :pagination="pagination"
+              @change="handleTableChange"
+              :scroll="{ x: 1500 }"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'order_no'">
+                  <a @click="handleViewDetail(record)" style="color: #1890ff; cursor: pointer">
+                    {{ record.order_no }}
+                  </a>
+                </template>
+                <template v-else-if="column.key === 'supplier_order_status'">
+                  <a-tag :color="getStatusColor(record.supplier_order_status)">
+                    {{ getStatusText(record.supplier_order_status) }}
+                  </a-tag>
+                </template>
+                <template v-else-if="column.key === 'planned_qty'">
+                  <span style="font-weight: 500; color: #1890ff">
+                    {{ record.planned_qty }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'action'">
+                  <a-button
+                    type="link"
+                    size="small"
+                    @click="handleViewDetail(record)"
+                  >
+                    查看详情
+                  </a-button>
+                </template>
+              </template>
+            </a-table>
+          </a-tab-pane>
+
+          <a-tab-pane key="forecast-detail-list" tab="预测详情列表（按预测详情）">
+            <a-table
+              :columns="forecastDetailListColumns"
+              :data-source="forecastDetailListDataSource"
+              :loading="loading"
+              :row-selection="forecastDetailListRowSelection"
+              :pagination="pagination"
+              @change="handleTableChange"
+              :scroll="{ x: 1500 }"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'feedback_status'">
+                  <a-tag :color="getFeedbackStatusColor(record.feedback_status)">
+                    {{ getFeedbackStatusText(record.feedback_status) }}
+                  </a-tag>
+                </template>
+                <template v-if="column.key === 'planned_qty'">
+                  <span style="font-weight: 500; color: #1890ff">
+                    {{ record.planned_qty }}
+                  </span>
+                </template>
+                <template v-if="column.key === 'committed_qty'">
+                  <span
+                    :style="{
+                      fontWeight: 500,
+                      color: record.committed_qty < record.planned_qty ? '#ff4d4f' : '#52c41a'
+                    }"
+                  >
+                    {{ record.committed_qty || '-' }}
+                  </span>
+                </template>
+                <template v-if="column.key === 'shortage_qty'">
+                  <span v-if="record.shortage_qty > 0" style="color: #ff4d4f; font-weight: 500">
+                    {{ record.shortage_qty }}
+                  </span>
+                  <span v-else style="color: #52c41a">-</span>
+                </template>
+                <template v-if="column.key === 'action'">
+                  <a-space>
+                    <!-- <a-button
+                      type="primary"
+                      size="small"
+                      @click="handleFeedback(record)"
+                    >
+                      确认
+                    </a-button> -->
+                    <a-button
+                      type="link"
+                      size="small"
+                      @click="handleViewDetail(record)"
+                    >
+                      查看详情
+                    </a-button>
+                  </a-space>
+                </template>
+              </template>
+            </a-table>
+          </a-tab-pane>
+        </a-tabs>
       </a-layout-content>
     </a-layout>
-
-    <a-modal
-      v-model:open="feedbackModalVisible"
-      title="反馈产能"
-      width="600px"
-      @ok="handleFeedbackSubmit"
-      @cancel="feedbackModalVisible = false"
-    >
-      <a-form :model="feedbackForm" layout="vertical">
-        <a-form-item label="零件号">
-          <a-input v-model:value="feedbackForm.parts_number" disabled />
-        </a-form-item>
-        <a-form-item label="零件名称">
-          <a-input v-model:value="feedbackForm.parts_name" disabled />
-        </a-form-item>
-        <a-form-item label="计划周期">
-          <a-input v-model:value="feedbackForm.plan_period" disabled />
-        </a-form-item>
-        <a-form-item label="计划交付数量">
-          <a-input v-model:value="feedbackForm.planned_qty" disabled />
-        </a-form-item>
-        <a-form-item 
-          label="承诺可满足数量" 
-          :rules="[{ required: true, message: '请输入承诺可满足数量' }]"
-        >
-          <a-input-number 
-            v-model:value="feedbackForm.committed_qty" 
-            :min="0"
-            :max="feedbackForm.planned_qty"
-            style="width: 100%"
-            placeholder="请输入承诺可满足数量"
-          />
-        </a-form-item>
-        <a-form-item label="备注">
-          <a-textarea 
-            v-model:value="feedbackForm.remark" 
-            placeholder="请输入备注信息" 
-            :rows="3"
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { message } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
-import { listPurchasePlan, submitPurchasePlanFeedback } from '@/api/srm'
+import { listPurchasePlan, listPurchasePlanDetails, confirmOrderDetail } from '@/api/srm'
 
 const session = useSessionStore()
+const router = useRouter()
 
 const loading = ref(false)
-const dataSource = ref<any[]>([])
+const activeTab = ref('forecast-list')
+const forecastListDataSource = ref<any[]>([])
+const forecastDetailListDataSource = ref<any[]>([])
 const selectedRowKeys = ref<any[]>([])
-const selectedRows = ref<any[]>([])
-const feedbackModalVisible = ref(false)
+const selectedRows = ref<any[]>()
 
 const queryParams = reactive({
+  orderNo: '',
   partsNumber: '',
   dateRange: null as any,
   feedbackStatus: undefined as string | undefined
-})
-
-const feedbackForm = reactive({
-  id: undefined as number | undefined,
-  parts_number: '',
-  parts_name: '',
-  plan_period: '',
-  planned_qty: 0,
-  committed_qty: undefined as number | undefined,
-  remark: ''
 })
 
 const pagination = reactive({
@@ -212,19 +213,33 @@ const pagination = reactive({
   showTotal: (total: number) => `共 ${total} 条`
 })
 
-const columns = [
-  { title: '零件号', dataIndex: 'parts_number', key: 'parts_number', width: 150, fixed: 'left' },
-  { title: '零件名称', dataIndex: 'parts_name', key: 'parts_name', width: 200, fixed: 'left' },
-  { title: '计划周期', dataIndex: 'plan_period', key: 'plan_period', width: 120 },
+const forecastListColumns = [
+  { title: '预测单号', dataIndex: 'order_no', key: 'order_no', width: 100, fixed: 'left' },
+  { title: '预测释放时间', dataIndex: 'forecast_release_date', key: 'forecast_release_date', width: 100 },
+  { title: '供应商名称', dataIndex: 'supplier_name', key: 'supplier_name', width: 100 },
+  { title: '订单状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
+  { title: '操作', key: 'action', width: 60, fixed: 'right' }
+]
+
+const forecastDetailListColumns = [
+  { title: '预测单号', dataIndex: 'order_no', key: 'order_no', width: 150, fixed: 'left' },
+  { title: '零件号', dataIndex: 'parts_number', key: 'parts_number', width: 150 },
+  { title: '零件名称', dataIndex: 'parts_name', key: 'parts_name', width: 200 },
+  { title: '计划时间', dataIndex: 'plan_period', key: 'plan_period', width: 120 },
+  { title: '预测释放时间', dataIndex: 'forecast_release_date', key: 'forecast_release_date', width: 120 },
   { title: '计划数量', dataIndex: 'planned_qty', key: 'planned_qty', width: 120 },
-  { title: '承诺可满足数量', dataIndex: 'committed_qty', key: 'committed_qty', width: 150 },
-  { title: '缺料数量', dataIndex: 'shortage_qty', key: 'shortage_qty', width: 100 },
-  { title: '反馈状态', dataIndex: 'feedback_status', key: 'feedback_status', width: 100 },
-  { title: '反馈截止日期', dataIndex: 'feedback_deadline', key: 'feedback_deadline', width: 120 },
   { title: '操作', key: 'action', width: 150, fixed: 'right' }
 ]
 
-const rowSelection = computed(() => ({
+const forecastListRowSelection = computed(() => ({
+  selectedRowKeys: selectedRowKeys.value,
+  onChange: (keys: any[], rows: any[]) => {
+    selectedRowKeys.value = keys
+    selectedRows.value = rows
+  }
+}))
+
+const forecastDetailListRowSelection = computed(() => ({
   selectedRowKeys: selectedRowKeys.value,
   onChange: (keys: any[], rows: any[]) => {
     selectedRowKeys.value = keys
@@ -250,6 +265,29 @@ function getFeedbackStatusText(status: string) {
   return textMap[status] || status
 }
 
+function getStatusColor(status: string | number | undefined) {
+  const colorMap: Record<number, string> = {
+    0: 'orange',
+    20: 'green',
+    21: 'purple',
+    25: 'blue',
+    30: 'blue'
+  }
+  return colorMap[Number(status)] || 'default'
+}
+
+function getStatusText(status: string | number | undefined) {
+  const textMap: Record<number, string> = {
+    0: '待确认',
+    20: '已确认',
+    21: '部分确认',
+    25: '部分发运',
+    30: '已发运',
+    40: '已结案'
+  }
+  return textMap[Number(status)] || '待确认'
+}
+
 function parseBatchInput(input: string): string[] {
   if (!input || !input.trim()) return []
   return input
@@ -258,26 +296,60 @@ function parseBatchInput(input: string): string[] {
     .filter(item => item.length > 0)
 }
 
+function handleTabChange(key: string) {
+  activeTab.value = key
+  selectedRowKeys.value = []
+  selectedRows.value = []
+  pagination.current = 1
+  handleSearch()
+}
+
+function handleQuery() {
+  pagination.current = 1
+  handleSearch()
+}
+
 async function handleSearch() {
   loading.value = true
   try {
+    const orderNos = parseBatchInput(queryParams.orderNo)
     const partsNumbers = parseBatchInput(queryParams.partsNumber)
 
     const startDate = queryParams.dateRange?.[0] ? String(queryParams.dateRange[0]).substring(0, 7) : ''
     const endDate = queryParams.dateRange?.[1] ? String(queryParams.dateRange[1]).substring(0, 7) : ''
 
-    const result = await listPurchasePlan({
-      userId: session.userId.toString(),
-      partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      feedbackStatus: queryParams.feedbackStatus,
-      limit: pagination.pageSize,
-      offset: (pagination.current - 1) * pagination.pageSize
-    })
+    let result
+    if (activeTab.value === 'forecast-list') {
+      result = await listPurchasePlan({
+        userId: session.userId.toString(),
+        orderNo: orderNos.length > 0 ? orderNos : undefined,
+        partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        feedbackStatus: queryParams.feedbackStatus,
+        limit: pagination.pageSize,
+        offset: (pagination.current - 1) * pagination.pageSize
+      })
+      forecastListDataSource.value = result.items || []
+      forecastDetailListDataSource.value = []
+    } else {
+      result = await listPurchasePlanDetails({
+        userId: session.userId.toString(),
+        orderNo: orderNos.length > 0 ? orderNos : undefined,
+        partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        feedbackStatus: queryParams.feedbackStatus,
+        limit: pagination.pageSize,
+        offset: (pagination.current - 1) * pagination.pageSize
+      })
+      forecastDetailListDataSource.value = result.items || []
+      forecastListDataSource.value = []
+    }
 
-    dataSource.value = result.items || []
     pagination.total = result.total || 0
+    selectedRowKeys.value = []
+    selectedRows.value = []
   } catch (error) {
     console.error('查询采购计划失败:', error)
     message.error('查询失败')
@@ -287,6 +359,7 @@ async function handleSearch() {
 }
 
 function handleReset() {
+  queryParams.orderNo = ''
   queryParams.partsNumber = ''
   queryParams.dateRange = null
   queryParams.feedbackStatus = undefined
@@ -300,36 +373,19 @@ function handleTableChange(pag: any) {
   handleSearch()
 }
 
-function handleFeedback(record: any) {
-  feedbackForm.id = record.id
-  feedbackForm.parts_number = record.parts_number
-  feedbackForm.parts_name = record.parts_name
-  feedbackForm.plan_period = record.plan_period
-  feedbackForm.planned_qty = record.planned_qty
-  feedbackForm.committed_qty = record.committed_qty
-  feedbackForm.remark = record.remark || ''
-  feedbackModalVisible.value = true
-}
-
-async function handleFeedbackSubmit() {
-  if (!feedbackForm.committed_qty || feedbackForm.committed_qty <= 0) {
-    message.error('请输入有效的承诺可满足数量')
+async function handleFeedback(record: any) {
+  const detailId = record.id || record.detail_id
+  if (!detailId) {
+    message.error('预测详情ID不存在')
     return
   }
-
   try {
-    await submitPurchasePlanFeedback(
-      String(feedbackForm.id),
-      session.userId.toString(),
-      feedbackForm.committed_qty,
-      feedbackForm.remark
-    )
-    message.success('产能反馈成功')
-    feedbackModalVisible.value = false
+    await confirmOrderDetail(String(detailId), session.userId)
+    message.success('已确认')
     handleSearch()
   } catch (error) {
-    console.error('产能反馈失败:', error)
-    message.error('反馈失败')
+    console.error('确认失败:', error)
+    message.error('确认失败')
   }
 }
 
@@ -343,7 +399,7 @@ function handleBatchFeedback() {
 }
 
 function handleViewDetail(record: any) {
-  message.info('查看详情功能待实现')
+  router.push(`/order-management-purchase-plan/${record.id || record.order_id}`)
 }
 
 function handleExport() {

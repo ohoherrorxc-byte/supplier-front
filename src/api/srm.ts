@@ -642,6 +642,7 @@ export async function ocrRecognize(file: File) {
 
 export interface PurchasePlanQueryParams {
   userId: string
+  orderNo?: string[]
   partsNumber?: string[]
   startDate?: string
   endDate?: string
@@ -651,15 +652,41 @@ export interface PurchasePlanQueryParams {
 }
 
 export async function listPurchasePlan(params: PurchasePlanQueryParams) {
-  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/order-management/purchase-plan', { params })
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/v1/purchase-plan', { params })
+  return data
+}
+
+export async function listPurchasePlanDetails(params: PurchasePlanQueryParams) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/v1/purchase-plan/details', { params })
   return data
 }
 
 export async function submitPurchasePlanFeedback(planId: string, userId: string, committedQty: number, remark?: string) {
-  const { data } = await http.post<{ success: boolean; message: string }>(`/order-management/purchase-plan/${planId}/feedback`, {
+  const { data } = await http.post<{ success: boolean; message: string }>(`/v1/purchase-plan/${planId}/feedback`, {
     userId,
     committedQty,
     remark: remark || ''
   })
+  return data
+}
+
+export async function getPurchasePlanOrder(orderId: string, userId: string) {
+  const { data } = await http.get<{ order: JsonMap; details: JsonMap[] }>(`/v1/purchase-plan/${orderId}`, {
+    params: { userId }
+  })
+  return data
+}
+
+export interface SalesForecastQueryParams {
+  userId: string
+  partsNumber?: string[]
+  startDate?: string
+  endDate?: string
+  limit?: number
+  offset?: number
+}
+
+export async function listSalesForecast(params: SalesForecastQueryParams) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/v1/sales-forecast', { params })
   return data
 }

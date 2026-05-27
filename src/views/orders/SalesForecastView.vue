@@ -85,6 +85,7 @@
 import { ref, reactive } from 'vue'
 import { message } from 'ant-design-vue'
 import { useSessionStore } from '@/stores/session'
+import { listSalesForecast } from '@/api/srm'
 
 const session = useSessionStore()
 
@@ -146,17 +147,28 @@ async function handleSearch() {
   loading.value = true
   try {
     const partsNumbers = parseBatchInput(queryParams.partsNumber)
-    
-    const startDate = queryParams.dateRange?.[0] || ''
-    const endDate = queryParams.dateRange?.[1] || ''
-    
-    message.info('销售预测查询功能待实现')
-    
-    dataSource.value = []
-    pagination.total = 0
+
+    const startDate = queryParams.dateRange?.[0] ? String(queryParams.dateRange[0]).substring(0, 7) : ''
+    const endDate = queryParams.dateRange?.[1] ? String(queryParams.dateRange[1]).substring(0, 7) : ''
+
+    const result = await listSalesForecast({
+      userId: session.userId.toString(),
+      partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      limit: pagination.pageSize,
+      offset: (pagination.current - 1) * pagination.pageSize
+    })
+
+    dataSource.value = result.items || []
+    pagination.total = result.total || 0
   } catch (error) {
+    console.error('查询销售预测失败:', error)
     message.error('查询失败')
   } finally {
+    loading.value = false
+  }
+}
     loading.value = false
   }
 }

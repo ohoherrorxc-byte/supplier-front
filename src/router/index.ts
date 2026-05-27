@@ -150,6 +150,13 @@ const router = createRouter({
           meta: { title: '订单管理5' },
         },
         {
+          path: 'order-management-purchase-plan/:id',
+          name: 'purchase-plan-detail',
+          component: () => import('@/views/orders/PurchasePlanDetailView.vue'),
+          props: true,
+          meta: { title: '预测详情' },
+        },
+        {
           path: 'order-management-dealer-history',
           name: 'order-management-dealer-history',
           component: () => import('@/views/orders/DealerHistoryView.vue'),

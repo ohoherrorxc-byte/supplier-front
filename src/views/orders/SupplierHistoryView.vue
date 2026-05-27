@@ -103,6 +103,11 @@
               <template v-if="column.key === 'index'">
                 {{ index + 1 }}
               </template>
+              <template v-else-if="column.key === 'dataType'">
+                <a-tag :color="record.hasForecast && !record.hasOrder ? 'orange' : 'green'">
+                  {{ record.hasForecast && !record.hasOrder ? '预测' : '订单' }}
+                </a-tag>
+              </template>
               <template v-else-if="column.isTimeColumn && record[column.key] > 0">
                 <a @click="handleDrillDown(record, column.key)" style="color: #1890ff; cursor: pointer;">
                   {{ record[column.key].toLocaleString() }}
@@ -300,9 +305,9 @@ function generateMockData() {
 function generateDynamicColumns(timeLabels: string[]) {
   const columns: ColumnsType = [
     { title: '序号', dataIndex: 'index', key: 'index', width: 50, fixed: 'left' },
-    // { title: '需求地址', dataIndex: ' address', key: 'address', width: 120, fixed: 'left' },
     { title: '零件号', dataIndex: 'partsNumber', key: 'partsNumber', width: 150, fixed: 'left' },
-    { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 200, fixed: 'left' }
+    { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 150, fixed: 'left' },
+    // { title: '类型', dataIndex: 'dataType', key: 'dataType', width: 80, fixed: 'left' }
   ]
 
   timeLabels.forEach(label => {
@@ -345,7 +350,8 @@ function renderChart(chartData: any) {
         trigger: 'item',
         formatter: function(params: any) {
           if (!params) return ''
-          return params.seriesName + '<br/>' + params.value
+          const dataType = params.data?.hasForecast && !params.data?.hasOrder ? '预测' : ''
+          return params.seriesName + (dataType ? ' [预测]' : '') + '<br/>' + params.value
         }
       },
       legend: {
@@ -377,6 +383,9 @@ function renderChart(chartData: any) {
         symbolSize: 8,
         itemStyle: {
           borderWidth: 2
+        },
+        lineStyle: {
+          type: s.hasForecast && !s.hasOrder ? 'dashed' : 'solid'
         }
       })) || []
     }
