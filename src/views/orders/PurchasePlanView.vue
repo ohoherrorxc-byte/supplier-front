@@ -177,6 +177,7 @@
 import { ref, reactive, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { useSessionStore } from '@/stores/session'
+import { listPurchasePlan, submitPurchasePlanFeedback } from '@/api/srm'
 
 const session = useSessionStore()
 
@@ -261,15 +262,24 @@ async function handleSearch() {
   loading.value = true
   try {
     const partsNumbers = parseBatchInput(queryParams.partsNumber)
-    
-    const startDate = queryParams.dateRange?.[0] || ''
-    const endDate = queryParams.dateRange?.[1] || ''
-    
-    message.info('采购计划查询功能待实现')
-    
-    dataSource.value = []
-    pagination.total = 0
+
+    const startDate = queryParams.dateRange?.[0] ? String(queryParams.dateRange[0]).substring(0, 7) : ''
+    const endDate = queryParams.dateRange?.[1] ? String(queryParams.dateRange[1]).substring(0, 7) : ''
+
+    const result = await listPurchasePlan({
+      userId: session.userId.toString(),
+      partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      feedbackStatus: queryParams.feedbackStatus,
+      limit: pagination.pageSize,
+      offset: (pagination.current - 1) * pagination.pageSize
+    })
+
+    dataSource.value = result.items || []
+    pagination.total = result.total || 0
   } catch (error) {
+    console.error('查询采购计划失败:', error)
     message.error('查询失败')
   } finally {
     loading.value = false
@@ -301,14 +311,26 @@ function handleFeedback(record: any) {
   feedbackModalVisible.value = true
 }
 
-function handleFeedbackSubmit() {
+async function handleFeedbackSubmit() {
   if (!feedbackForm.committed_qty || feedbackForm.committed_qty <= 0) {
     message.error('请输入有效的承诺可满足数量')
     return
   }
 
-  message.info('产能反馈功能待实现')
-  feedbackModalVisible.value = false
+  try {
+    await submitPurchasePlanFeedback(
+      String(feedbackForm.id),
+      session.userId.toString(),
+      feedbackForm.committed_qty,
+      feedbackForm.remark
+    )
+    message.success('产能反馈成功')
+    feedbackModalVisible.value = false
+    handleSearch()
+  } catch (error) {
+    console.error('产能反馈失败:', error)
+    message.error('反馈失败')
+  }
 }
 
 function handleBatchFeedback() {

@@ -39,6 +39,7 @@ export interface OrderQueryParams {
   deliveryStatus?: string[]
   startDate?: string
   endDate?: string
+  requireAttr?: string
   limit?: number
   offset?: number
   sortField?: string
@@ -635,4 +636,30 @@ export async function ocrRecognize(file: File) {
     throw new Error('OCR识别失败')
   }
   return response.json()
+}
+
+// ========== 采购计划 API ==========
+
+export interface PurchasePlanQueryParams {
+  userId: string
+  partsNumber?: string[]
+  startDate?: string
+  endDate?: string
+  feedbackStatus?: string
+  limit?: number
+  offset?: number
+}
+
+export async function listPurchasePlan(params: PurchasePlanQueryParams) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/order-management/purchase-plan', { params })
+  return data
+}
+
+export async function submitPurchasePlanFeedback(planId: string, userId: string, committedQty: number, remark?: string) {
+  const { data } = await http.post<{ success: boolean; message: string }>(`/order-management/purchase-plan/${planId}/feedback`, {
+    userId,
+    committedQty,
+    remark: remark || ''
+  })
+  return data
 }

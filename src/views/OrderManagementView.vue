@@ -208,17 +208,17 @@
                       >
                         确认
                       </a-button> -->
-                      <!-- <a-button 
-                        v-if="record.supplier_order_status === 0" 
-                        type="default" 
+                      <!-- <a-button
+                        v-if="record.supplier_order_status === 0"
+                        type="default"
                         size="small"
                         danger
                         @click="handleRejectOrder(record)"
                       >
                         驳回
                       </a-button> -->
-                      <a-button 
-                        type="link" 
+                      <a-button
+                        type="link"
                         size="small"
                         @click="handleViewDetail(record,'isDetail')"
                       >
@@ -490,7 +490,7 @@ async function handleSearch() {
     const endDate = queryParams.dateRange?.[1] || ''
     
     const deliveryStatuses = queryParams.deliveryStatus.length > 0 ? queryParams.deliveryStatus : undefined
-    
+
     let result
     if (activeTab.value === 'order-list') {
       // 订单列表（按订单号）：使用订单纬度的接口
@@ -511,6 +511,7 @@ async function handleSearch() {
         deliveryStatus: deliveryStatuses,
         startDate,
         endDate,
+        requireAttr: '订单',
         limit: pagination.pageSize,
         offset: (pagination.current - 1) * pagination.pageSize,
         sortField: pagination.sortField,
@@ -538,6 +539,7 @@ async function handleSearch() {
         deliveryStatus: deliveryStatuses,
         startDate,
         endDate,
+        requireAttr: '订单',
         limit: pagination.pageSize,
         offset: (pagination.current - 1) * pagination.pageSize,
         sortField: pagination.sortField,
