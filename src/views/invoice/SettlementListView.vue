@@ -7,6 +7,15 @@
       <a-form-item label="结算单号">
         <a-input v-model:value="searchForm.settlementNo" placeholder="模糊搜索" style="width: 180px" />
       </a-form-item>
+      <a-form-item label="验收单号">
+        <a-input v-model:value="searchForm.acceptApplyNo" placeholder="模糊搜索" style="width: 180px" />
+      </a-form-item>
+      <a-form-item label="BOM订单号">
+        <a-input v-model:value="searchForm.bomOrderNo" placeholder="模糊搜索" style="width: 180px" />
+      </a-form-item>
+      <a-form-item label="合同号">
+        <a-input v-model:value="searchForm.contractNo" placeholder="模糊搜索" style="width: 180px" />
+      </a-form-item>
       <a-form-item>
         <a-button type="primary" @click="loadData">查询</a-button>
         <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
@@ -155,7 +164,10 @@ const detailModalVisible = ref(false)
 const currentDetail = ref<any>(null)
 
 const searchForm = reactive({
-  settlementNo: ''
+  settlementNo: '',
+  acceptApplyNo: '',
+  bomOrderNo: '',
+  contractNo: ''
 })
 
 const pagination = reactive({
@@ -166,6 +178,9 @@ const pagination = reactive({
 
 const columns = [
   { title: '结算单号', dataIndex: 'settlementNo', key: 'settlementNo', width: 180 },
+  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
+  { title: 'BOM订单号', dataIndex: 'bomPurchaseOrderNo', key: 'bomPurchaseOrderNo', width: 150 },
+  { title: '合同号', dataIndex: 'contractNo', key: 'contractNo', width: 150 },
   { title: '供应商编号', dataIndex: 'supplierNo', key: 'supplierNo', width: 120 },
   { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 200 },
   { title: '发票号码', dataIndex: 'invoiceNo', key: 'invoiceNo', width: 150 },
@@ -231,6 +246,9 @@ async function loadData() {
     const result = await listSettlementOrders({
       userId: session.operatorUserId,
       settlementNo: searchForm.settlementNo || undefined,
+      acceptApplyNo: searchForm.acceptApplyNo || undefined,
+      bomOrderNo: searchForm.bomOrderNo || undefined,
+      contractNo: searchForm.contractNo || undefined,
       pageSize: pagination.pageSize,
       pageNum: pagination.current
     })
@@ -251,6 +269,9 @@ function handleTableChange(pag: any) {
 
 function resetSearch() {
   searchForm.settlementNo = ''
+  searchForm.acceptApplyNo = ''
+  searchForm.bomOrderNo = ''
+  searchForm.contractNo = ''
   loadData()
 }
 

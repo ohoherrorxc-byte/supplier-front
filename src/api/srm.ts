@@ -568,6 +568,9 @@ export async function listSettlementOrders(params: {
   userId: string
   settlementNo?: string
   status?: number
+  acceptApplyNo?: string
+  bomOrderNo?: string
+  contractNo?: string
   pageSize?: number
   pageNum?: number
 }) {
