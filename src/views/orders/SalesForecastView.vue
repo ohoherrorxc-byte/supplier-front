@@ -169,9 +169,6 @@ async function handleSearch() {
     loading.value = false
   }
 }
-    loading.value = false
-  }
-}
 
 function handleReset() {
   queryParams.partsNumber = ''
