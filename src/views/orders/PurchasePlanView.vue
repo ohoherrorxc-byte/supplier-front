@@ -78,6 +78,20 @@
 
         <a-tabs v-model:activeKey="activeTab" @change="handleTabChange">
           <a-tab-pane key="forecast-list" tab="预测列表（按预测单号）">
+            <div class="summary-row" v-if="forecastListDataSource.length > 0">
+              <span class="summary-item">
+                <span class="summary-label">预测需求总数：</span>
+                <span class="summary-value total">{{ forecastTotals.total }}</span>
+              </span>
+              <span class="summary-item">
+                <span class="summary-label">待确认需求数量：</span>
+                <span class="summary-value pending">{{ forecastTotals.pending }}</span>
+              </span>
+              <span class="summary-item">
+                <span class="summary-label">已确认需求数量：</span>
+                <span class="summary-value confirmed">{{ forecastTotals.confirmed }}</span>
+              </span>
+            </div>
             <a-table
               :columns="forecastListColumns"
               :data-source="forecastListDataSource"
@@ -103,6 +117,21 @@
                     {{ record.planned_qty }}
                   </span>
                 </template>
+                <template v-else-if="column.key === 'forecast_total_qty'">
+                  <span style="font-weight: 500; color: #1890ff">
+                    {{ record.forecast_total_qty }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'forecast_pending_qty'">
+                  <span style="color: #ff4d4f; font-weight: 500">
+                    {{ record.forecast_pending_qty }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'forecast_confirmed_qty'">
+                  <span style="color: #52c41a; font-weight: 500">
+                    {{ record.forecast_confirmed_qty }}
+                  </span>
+                </template>
                 <template v-else-if="column.key === 'action'">
                   <a-button
                     type="link"
@@ -117,6 +146,20 @@
           </a-tab-pane>
 
           <a-tab-pane key="forecast-detail-list" tab="预测详情列表（按预测详情）">
+            <div class="summary-row" v-if="forecastDetailListDataSource.length > 0">
+              <span class="summary-item">
+                <span class="summary-label">预测需求总数：</span>
+                <span class="summary-value total">{{ forecastTotals.total }}</span>
+              </span>
+              <span class="summary-item">
+                <span class="summary-label">待确认需求数量：</span>
+                <span class="summary-value pending">{{ forecastTotals.pending }}</span>
+              </span>
+              <span class="summary-item">
+                <span class="summary-label">已确认需求数量：</span>
+                <span class="summary-value confirmed">{{ forecastTotals.confirmed }}</span>
+              </span>
+            </div>
             <a-table
               :columns="forecastDetailListColumns"
               :data-source="forecastDetailListDataSource"
@@ -217,6 +260,9 @@ const forecastListColumns = [
   { title: '预测单号', dataIndex: 'order_no', key: 'order_no', width: 100, fixed: 'left' },
   { title: '预测释放时间', dataIndex: 'forecast_release_date', key: 'forecast_release_date', width: 100 },
   { title: '供应商名称', dataIndex: 'supplier_name', key: 'supplier_name', width: 100 },
+  { title: '预测需求总数', dataIndex: 'forecast_total_qty', key: 'forecast_total_qty', width: 100 },
+  // { title: '预测待确认需求数量', dataIndex: 'forecast_pending_qty', key: 'forecast_pending_qty', width: 120 },
+  // { title: '已确认预测需求数量', dataIndex: 'forecast_confirmed_qty', key: 'forecast_confirmed_qty', width: 120 },
   { title: '订单状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
   { title: '操作', key: 'action', width: 60, fixed: 'right' }
 ]
@@ -246,6 +292,31 @@ const forecastDetailListRowSelection = computed(() => ({
     selectedRows.value = rows
   }
 }))
+
+const forecastTotals = computed(() => {
+  if (activeTab.value === 'forecast-list') {
+    let total = 0, pending = 0, confirmed = 0
+    for (const item of forecastListDataSource.value) {
+      total += Number(item.forecast_total_qty) || 0
+      pending += Number(item.forecast_pending_qty) || 0
+      confirmed += Number(item.forecast_confirmed_qty) || 0
+    }
+    return { total, pending, confirmed }
+  } else {
+    let total = 0, pending = 0, confirmed = 0
+    for (const item of forecastDetailListDataSource.value) {
+      const status = Number(item.supplier_order_status)
+      const qty = Number(item.planned_qty) || 0
+      total += qty
+      if (status === 20) {
+        confirmed += qty
+      } else {
+        pending += qty
+      }
+    }
+    return { total, pending, confirmed }
+  }
+})
 
 function getFeedbackStatusColor(status: string) {
   const colorMap: Record<string, string> = {
@@ -413,4 +484,28 @@ handleSearch()
 .purchase-plan-view {
   padding: 16px;
 }
+.summary-row {
+  display: flex;
+  gap: 32px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.summary-label {
+  color: #666;
+  font-size: 14px;
+}
+.summary-value {
+  font-weight: 600;
+  font-size: 14px;
+}
+.summary-value.total { color: #1890ff; }
+.summary-value.pending { color: #ff4d4f; }
+.summary-value.confirmed { color: #52c41a; }
 </style>

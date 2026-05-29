@@ -36,6 +36,14 @@
                 style="width: 100%"
               />
             </a-form-item>
+            <a-form-item label="供应商">
+              <a-input
+                v-model:value="queryParams.supplierId"
+                placeholder="输入供应商编号"
+                allow-clear
+                style="width: 100%"
+              />
+            </a-form-item>
             <!-- <a-form-item label="需求地址">
               <a-select
                 v-model:value="queryParams.demandFactories"
@@ -110,14 +118,20 @@
               </template>
               <template v-else-if="column.isTimeColumn && record[column.key] > 0">
                 <a @click="handleDrillDown(record, column.key)" style="color: #1890ff; cursor: pointer;">
-                  {{ record[column.key].toLocaleString() }}
+                  {{ record[column.key].toLocaleString() }}{{ record[column.key + '_isForecast'] ? ' (预测)' : '' }}
                 </a>
               </template>
               <template v-else-if="column.isTimeColumn">
                 <span>0</span>
               </template>
               <template v-else-if="column.key === 'total'">
-                <span style="font-weight: 500;">{{ record.total.toLocaleString() }}</span>
+                <span style="font-weight: 500;">{{ record.total.toLocaleString() }}{{ record.dataType === '预测' ? ' (预测)' : '' }}</span>
+              </template>
+              <template v-else-if="column.key === 'totalOrder'">
+                <span style="color: #52c41a; font-weight: 500;">{{ record.totalOrder > 0 ? record.totalOrder.toLocaleString() : '-' }}</span>
+              </template>
+              <template v-else-if="column.key === 'totalForecast'">
+                <span style="color: #ff4d4f; font-weight: 500;">{{ record.totalForecast > 0 ? record.totalForecast.toLocaleString() : '-' }}</span>
               </template>
             </template>
           </a-table>
@@ -144,6 +158,7 @@
         :data-source="drillDownDrawer.data"
         :loading="drillDownDrawer.loading"
         :pagination="{ pageSize: 10, showSizeChanger: true, showTotal: (total: number) => `共 ${total} 条` }"
+        :row-class-name="(record: any) => drillDownDrawer.hasOrder && record.requireAttr === '预测' ? 'forecast-row' : ''"
         size="small"
       >
         <template #bodyCell="{ column, record }">
@@ -178,12 +193,9 @@ const queryParams = reactive({
   granularity: 'month' as 'month' | 'year',
   dateRange: null as any,
   demandFactories: [] as string[],
-  partsNumbers: ''
+  partsNumbers: '',
+  supplierId: undefined as string | undefined
 })
-
-const factoryOptions = ref([
- 
-])
 
 const aggregatedData = ref<any[]>([])
 const dynamicColumns = ref<ColumnsType>([])
@@ -192,7 +204,8 @@ const drillDownDrawer = reactive({
   open: false,
   loading: false,
   data: [] as any[],
-  filter: {} as any
+  filter: {} as any,
+  hasOrder: false
 })
 
 const drillDownColumns: ColumnsType = [
@@ -202,7 +215,8 @@ const drillDownColumns: ColumnsType = [
   { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 200 },
   // { title: '需求地址', dataIndex: 'address', key: 'address', width: 120 },
   { title: '采购日期', dataIndex: 'purchaseDate', key: 'purchaseDate', width: 120 },
-  { title: '需求量', dataIndex: 'demandQty', key: 'demandQty', width: 120, align: 'right' }
+  { title: '需求量', dataIndex: 'demandQty', key: 'demandQty', width: 120, align: 'right' },
+  { title: '需求属性', dataIndex: 'requireAttr', key: 'requireAttr', width: 100 }
 ]
 
 function filterOption(input: string, option: any) {
@@ -322,6 +336,24 @@ function generateDynamicColumns(timeLabels: string[]) {
   })
 
   columns.push({
+    title: '期间订单合计',
+    dataIndex: 'totalOrder',
+    key: 'totalOrder',
+    width: 100,
+    align: 'right',
+    fixed: 'right'
+  } as any)
+
+  columns.push({
+    title: '期间预测合计',
+    dataIndex: 'totalForecast',
+    key: 'totalForecast',
+    width: 100,
+    align: 'right',
+    fixed: 'right'
+  } as any)
+
+  columns.push({
     title: '期间总合计',
     dataIndex: 'total',
     key: 'total',
@@ -347,15 +379,24 @@ function renderChart(chartData: any) {
 
     const option: EChartsOption = {
       tooltip: {
-        trigger: 'item',
+        trigger: 'axis',
         formatter: function(params: any) {
-          if (!params) return ''
-          const dataType = params.data?.hasForecast && !params.data?.hasOrder ? '预测' : ''
-          return params.seriesName + (dataType ? ' [预测]' : '') + '<br/>' + params.value
+          if (!params || params.length === 0) return ''
+          const timeKey = params[0].axisValue
+          // 提取零件号（去掉后缀）
+          let partsNumber = params[0].seriesName.replace(/ \(订单\)| \(预测\)| \(连接\)/g, '')
+          let result = '<b>' + partsNumber + '</b><br/>' + timeKey + '<br/>'
+          params.forEach((p: any) => {
+            if (p.value && p.value > 0 && !p.seriesName.includes('连接')) {
+              const type = p.seriesName.includes('订单') ? '订单' : '预测'
+              result += p.marker + type + ': ' + p.value + '<br/>'
+            }
+          })
+          return result
         }
       },
       legend: {
-        data: chartData.series?.map((s: any) => s.name) || [],
+        data: chartData.series?.flatMap((s: any) => [s.name + ' (订单)', s.name + ' (预测)']) || [],
         top: 10
       },
       grid: {
@@ -373,21 +414,68 @@ function renderChart(chartData: any) {
         type: 'value',
         name: '采购数量'
       },
-      series: chartData.series?.map((s: any) => ({
-        name: s.name,
-        type: 'line',
-        data: s.data,
-        smooth: true,
-        showSymbol: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        itemStyle: {
-          borderWidth: 2
-        },
-        lineStyle: {
-          type: s.hasForecast && !s.hasOrder ? 'dashed' : 'solid'
+      series: chartData.series?.flatMap((s: any) => {
+        const orderData: any[] = []
+        const forecastData: any[] = []
+        const connectorData: any[] = []
+
+        let lastOrderIdx = -1
+        let lastOrderValue = 0
+        let firstForecastIdx = -1
+
+        s.data.forEach((value: number, idx: number) => {
+          if (s.isForecastList?.[idx]) {
+            forecastData.push([idx, value])
+            if (firstForecastIdx === -1) firstForecastIdx = idx
+          } else if (value > 0) {
+            orderData.push([idx, value])
+            lastOrderIdx = idx
+            lastOrderValue = value
+          }
+        })
+
+        // 如果有订单终点和预测起点，添加连接虚线
+        if (lastOrderIdx >= 0 && firstForecastIdx >= 0) {
+          connectorData.push([lastOrderIdx, lastOrderValue], [firstForecastIdx, s.data[firstForecastIdx]])
         }
-      })) || []
+
+        const seriesList: any[] = [
+          {
+            name: s.name + ' (订单)',
+            type: 'line',
+            data: orderData,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 8,
+            lineStyle: { type: 'solid', width: 2 },
+            itemStyle: { color: '#1890ff', borderWidth: 2 }
+          },
+          {
+            name: s.name + ' (预测)',
+            type: 'line',
+            data: forecastData,
+            smooth: true,
+            symbol: 'diamond',
+            symbolSize: 10,
+            lineStyle: { type: 'dashed', width: 2 },
+            itemStyle: { color: '#ff7875', borderColor: '#ff4d4f', borderWidth: 2 }
+          }
+        ]
+
+        // 添加连接虚线
+        if (connectorData.length > 0) {
+          seriesList.push({
+            name: s.name + ' (连接)',
+            type: 'line',
+            data: connectorData,
+            smooth: true,
+            symbol: 'none',
+            lineStyle: { type: 'dashed', width: 1, color: '#999' }
+          })
+        }
+
+        return seriesList
+      }) || []
     }
 
     chartInstance.value.setOption(option)
@@ -411,6 +499,7 @@ function handleReset() {
 async function handleDrillDown(record: any, timeKey: string) {
   drillDownDrawer.open = true
   drillDownDrawer.loading = true
+  drillDownDrawer.hasOrder = false
   drillDownDrawer.filter = {
     partsNumber: record.partsNumber,
     address: record.address,
@@ -429,6 +518,7 @@ async function handleDrillDown(record: any, timeKey: string) {
 
     if (result.success) {
       drillDownDrawer.data = result.details || []
+      drillDownDrawer.hasOrder = (result.details || []).some((d: any) => d.requireAttr === '订单')
     } else {
       message.error(result.message || '查询明细失败')
       drillDownDrawer.data = generateMockDrillDownData(record, timeKey)
@@ -512,5 +602,9 @@ onMounted(() => {
 <style scoped>
 .supplier-history-view {
   padding: 16px;
+}
+:deep(.ant-table .forecast-row) {
+  text-decoration: line-through;
+  color: #999;
 }
 </style>

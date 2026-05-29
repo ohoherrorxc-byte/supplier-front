@@ -167,11 +167,7 @@ const queryParams = reactive({
 })
 
 const factoryOptions = ref([
-  { label: '上海工厂 (SHPC)', value: 'SHPC' },
-  { label: '北京工厂 (BJPC)', value: 'BJPC' },
-  { label: '广州工厂 (GZPC)', value: 'GZPC' },
-  { label: '武汉工厂 (WHPC)', value: 'WHPC' },
-  { label: '重庆工厂 (CQPC)', value: 'CQPC' }
+  
 ])
 
 const aggregatedData = ref<any[]>([])
@@ -191,7 +187,8 @@ const drillDownColumns: ColumnsType = [
   { title: '零件名称', dataIndex: 'partsName', key: 'partsName', width: 200 },
   { title: '需求工厂', dataIndex: 'demandFactory', key: 'demandFactory', width: 120 },
   { title: '采购日期', dataIndex: 'purchaseDate', key: 'purchaseDate', width: 120 },
-  { title: '需求量', dataIndex: 'demandQty', key: 'demandQty', width: 120, align: 'right' }
+  { title: '需求量', dataIndex: 'demandQty', key: 'demandQty', width: 120, align: 'right' },
+  { title: '需求属性', dataIndex: 'requireAttr', key: 'requireAttr', width: 120 }
 ]
 
 function filterOption(input: string, option: any) {
