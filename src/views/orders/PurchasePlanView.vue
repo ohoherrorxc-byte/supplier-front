@@ -263,7 +263,7 @@ const forecastListColumns = [
   { title: '预测需求总数', dataIndex: 'forecast_total_qty', key: 'forecast_total_qty', width: 100 },
   // { title: '预测待确认需求数量', dataIndex: 'forecast_pending_qty', key: 'forecast_pending_qty', width: 120 },
   // { title: '已确认预测需求数量', dataIndex: 'forecast_confirmed_qty', key: 'forecast_confirmed_qty', width: 120 },
-  { title: '订单状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
+  { title: '预测状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
   { title: '操作', key: 'action', width: 60, fixed: 'right' }
 ]
 

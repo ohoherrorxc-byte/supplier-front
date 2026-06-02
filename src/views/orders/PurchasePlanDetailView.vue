@@ -101,7 +101,7 @@ const detailColumns: ColumnsType<JsonMap> = [
   { title: '计划时间', dataIndex: 'plan_period', key: 'plan_period', width: 120 },
   { title: '预测释放时间', dataIndex: 'forecast_release_date', key: 'forecast_release_date', width: 120 },
   { title: '计划数量', dataIndex: 'planned_qty', key: 'planned_qty', width: 120 },
-  { title: '订单状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
+  { title: '预测状态', dataIndex: 'supplier_order_status', key: 'supplier_order_status', width: 100 },
   { title: '操作', key: 'action', width: 120, fixed: 'right' }
 ]
 

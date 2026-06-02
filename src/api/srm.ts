@@ -416,6 +416,7 @@ export async function analyzeSupplierHistory(params: {
   endDate: string
   demandFactories: string[]
   partsNumbers: string[]
+  supplierName?: string
 }) {
   const { data } = await http.post<{
     success: boolean

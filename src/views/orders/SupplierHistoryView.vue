@@ -273,7 +273,8 @@ async function handleAnalyze() {
       startDate: startDate,
       endDate: endDate,
       demandFactories: queryParams.demandFactories,
-      partsNumbers: parseBatchInput(queryParams.partsNumbers)
+      partsNumbers: parseBatchInput(queryParams.partsNumbers),
+      supplierName: queryParams.supplierId || undefined
     })
 
     if (result.success) {
