@@ -54,6 +54,7 @@ async function onSubmit() {
     session.setUserId(res.userId)
     session.setUserName(res.userName)
     session.setPermissions(res.isAdmin || formState.account === "niuyinuo" || false, res.isSupplierClient || false)
+    session.setSupplierNo(res.supplierNo || '')
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     router.push(redirect)
   } catch (err: any) {

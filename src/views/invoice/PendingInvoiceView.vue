@@ -100,7 +100,7 @@ const searchForm = reactive({
 
 const pagination = reactive({
   current: 1,
-  pageSize: 20,
+  pageSize: 10,
   total: 0,
   showSizeChanger: true,
   showTotal: (total: number) => `共 ${total} 条`
@@ -201,7 +201,8 @@ async function loadData() {
   loading.value = true
   try {
     const params = {
-      userId: session.operatorUserId,
+      supplierNo: session.supplierNo,
+      isAdmin: session.isAdmin,
       acceptApplyNo: searchForm.acceptApplyNo || undefined,
       orderNo: searchForm.orderNo || undefined,
       partsNo: searchForm.partsNo || undefined,

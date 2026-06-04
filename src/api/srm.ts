@@ -517,7 +517,9 @@ export async function listFiles(params: {
 
 // 待开票清单 - 一般采购
 export async function listPendingInvoiceGeneral(params: {
-  userId: string
+  userId?: string
+  supplierNo?: string
+  isAdmin?: boolean
   partsNo?: string
   partsName?: string
   pageSize?: number
@@ -529,7 +531,9 @@ export async function listPendingInvoiceGeneral(params: {
 
 // 待开票清单 - BOM采购
 export async function listPendingInvoiceBom(params: {
-  userId: string
+  userId?: string
+  supplierNo?: string
+  isAdmin?: boolean
   partsNo?: string
   partsName?: string
   pageSize?: number
