@@ -39,6 +39,7 @@
           <right-outlined />
         </div>
       </div>
+    
       <div class="stat-card stat-danger" :class="{ 'has-value': stats.pendingInvoiceCount > 0 }" @click="go('/invoice/pending/general')">
         <div class="stat-icon">
           <file-text-outlined />
@@ -46,6 +47,18 @@
         <div class="stat-info">
           <span class="stat-value">{{ stats.pendingInvoiceCount }}</span>
           <span class="stat-label">待开票数量</span>
+        </div>
+        <div class="stat-arrow">
+          <right-outlined />
+        </div>
+      </div>
+        <div class="stat-card stat-warning" :class="{ 'has-value': stats.pendingForecast > 0 }" @click="go('/order-management-purchase-plan?feedbackStatus=pending')">
+        <div class="stat-icon">
+          <file-search-outlined />
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.pendingForecast }}</span>
+          <span class="stat-label">待确认预测</span>
         </div>
         <div class="stat-arrow">
           <right-outlined />
@@ -64,7 +77,7 @@
         </div>
       </div>
 
-      <div class="stat-card stat-warning" @click="go('/shipments?actualEtaDate=' + dayjs().format('YYYY-MM-DD'))">
+      <!-- <div class="stat-card stat-info" @click="go('/shipments?actualEtaDate=' + dayjs().format('YYYY-MM-DD'))">
         <div class="stat-icon">
           <inbox-outlined />
         </div>
@@ -75,7 +88,7 @@
         <div class="stat-arrow">
           <right-outlined />
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- 快捷入口 -->
@@ -239,7 +252,8 @@ const stats = reactive({
   todayArriving: 0,
   pendingInvoiceCount: 0,
   pendingInvoiceGeneral: 0,
-  pendingInvoiceBom: 0
+  pendingInvoiceBom: 0,
+  pendingForecast: 0
 })
 
 interface Message {
@@ -534,6 +548,11 @@ function getIcon(type: string) {
 .stat-danger .stat-icon {
   background: linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%);
   color: #ff4d4f;
+}
+
+.stat-info .stat-icon {
+  background: linear-gradient(135deg, #e6f4ff 0%, #adc6ff 100%);
+  color: #597ef7;
 }
 
 .stat-info {

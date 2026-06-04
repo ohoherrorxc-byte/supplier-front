@@ -39,16 +39,15 @@
                 style="width: 100%"
               />
             </a-form-item>
-            <a-form-item label="反馈状态">
+            <a-form-item label="预测状态">
               <a-select
-                v-model:value="queryParams.feedbackStatus"
+                v-model:value="queryParams.supplierOrderStatus"
                 placeholder="选择状态"
                 style="width: 100%"
                 allow-clear
               >
-                <a-select-option value="pending">待反馈</a-select-option>
-                <a-select-option value="confirmed">已确认</a-select-option>
-                <a-select-option value="shortage">缺料预警</a-select-option>
+                <a-select-option value="0">待确认</a-select-option>
+                <a-select-option value="20">已确认</a-select-option>
               </a-select>
             </a-form-item>
             <a-form-item>
@@ -228,7 +227,7 @@ import { ref, reactive, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
-import { listPurchasePlan, listPurchasePlanDetails, confirmOrderDetail } from '@/api/srm'
+import { listPurchasePlan, listPurchasePlanDetails, confirmOrderDetail, exportPurchasePlan } from '@/api/srm'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -244,7 +243,7 @@ const queryParams = reactive({
   orderNo: '',
   partsNumber: '',
   dateRange: null as any,
-  feedbackStatus: undefined as string | undefined
+  supplierOrderStatus: undefined as string | undefined
 })
 
 const pagination = reactive({
@@ -397,7 +396,7 @@ async function handleSearch() {
         partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        feedbackStatus: queryParams.feedbackStatus,
+        supplierOrderStatus: queryParams.supplierOrderStatus,
         limit: pagination.pageSize,
         offset: (pagination.current - 1) * pagination.pageSize
       })
@@ -410,7 +409,7 @@ async function handleSearch() {
         partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
-        feedbackStatus: queryParams.feedbackStatus,
+        supplierOrderStatus: queryParams.supplierOrderStatus,
         limit: pagination.pageSize,
         offset: (pagination.current - 1) * pagination.pageSize
       })
@@ -433,7 +432,7 @@ function handleReset() {
   queryParams.orderNo = ''
   queryParams.partsNumber = ''
   queryParams.dateRange = null
-  queryParams.feedbackStatus = undefined
+  queryParams.supplierOrderStatus = undefined
   pagination.current = 1
   handleSearch()
 }
@@ -474,7 +473,31 @@ function handleViewDetail(record: any) {
 }
 
 function handleExport() {
-  message.info('导出功能待实现')
+  const orderNos = parseBatchInput(queryParams.orderNo)
+  const partsNumbers = parseBatchInput(queryParams.partsNumber)
+  const startDate = queryParams.dateRange?.[0] ? String(queryParams.dateRange[0]).substring(0, 7) : ''
+  const endDate = queryParams.dateRange?.[1] ? String(queryParams.dateRange[1]).substring(0, 7) : ''
+
+  exportPurchasePlan({
+    userId: session.userId.toString(),
+    orderNo: orderNos.length > 0 ? orderNos : undefined,
+    partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    supplierOrderStatus: queryParams.supplierOrderStatus
+  }).then((response: any) => {
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '采购计划导出.xlsx'
+    link.click()
+    window.URL.revokeObjectURL(url)
+    message.success('导出成功')
+  }).catch((error: any) => {
+    console.error('导出失败:', error)
+    message.error('导出失败')
+  })
 }
 
 handleSearch()

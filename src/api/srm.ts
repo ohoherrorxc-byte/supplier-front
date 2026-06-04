@@ -647,7 +647,7 @@ export interface PurchasePlanQueryParams {
   partsNumber?: string[]
   startDate?: string
   endDate?: string
-  feedbackStatus?: string
+  supplierOrderStatus?: string
   limit?: number
   offset?: number
 }
@@ -676,6 +676,14 @@ export async function getPurchasePlanOrder(orderId: string, userId: string) {
     params: { userId }
   })
   return data
+}
+
+export async function exportPurchasePlan(params: Omit<PurchasePlanQueryParams, 'limit' | 'offset'>) {
+  const response = await http.get('/v1/purchase-plan/export', {
+    params,
+    responseType: 'blob'
+  })
+  return response
 }
 
 export interface SalesForecastQueryParams {
