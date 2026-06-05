@@ -478,15 +478,18 @@ async function onSubmit() {
     return
   }
 
-  // 校验发票条目数必须与验收明细条目数一致（逐条对应）
-  if (invoiceLines.value.length !== selectedDetails.value.length) {
-    message.warning(`发票条目数(${invoiceLines.value.length})与验收明细条目数(${selectedDetails.value.length})不一致，请核实后再提交`)
-    return
-  }
+ 
 
   // 获取订单类型：硬件PO订单、License、开发费及其他
   const orderTypeStr = selectedDetails.value[0]?.purchaseOrderType || ''
-
+  console.log('订单类型:', orderTypeStr)
+  if(orderTypeStr=== '硬件PO订单') {
+    // 校验发票条目数必须与验收明细条目数一致（逐条对应）
+   if (invoiceLines.value.length !== selectedDetails.value.length) {
+     message.warning(`发票条目数(${invoiceLines.value.length})与验收明细条目数(${selectedDetails.value.length})不一致，请核实后再提交`)
+     return
+   }
+  }
   // 逐条校验：根据订单类型进行不同校验
   for (let i = 0; i < invoiceLines.value.length; i++) {
     const invoice = invoiceLines.value[i]
@@ -509,17 +512,17 @@ async function onSubmit() {
       }
     }
     // License：校验条目数、总额，但不校验品名
-    else if (orderTypeStr === 'License') {
-      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-      }
-    }
-    // 开发费及其他：不校验品名和条目数，只校验总额
-    else {
-      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-      }
-    }
+    // else if (orderTypeStr === 'License') {
+    //   if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+    //     errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+    //   }
+    // }
+    // // 开发费及其他：不校验品名和条目数，只校验总额
+    // else {
+    //   if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+    //     errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+    //   }
+    // }
 
     if (errors.length > 0) {
       message.warning(`第${i + 1}条发票与验收明细不一致: ${errors.join(', ')}`)

@@ -21,6 +21,15 @@
           <a-menu-item key="/dashboard">
             <router-link to="/dashboard">工作台</router-link>
           </a-menu-item>
+          <template v-if="session.onlyOpenInvoice">
+          <a-menu-item key="/invoice">
+            <router-link to="/invoice/pending/general">供应商对账平台</router-link>
+          </a-menu-item>
+          <a-menu-item key="/profile">
+            <router-link to="/profile">个人信息</router-link>
+          </a-menu-item>
+          </template>
+          <template v-else>
             <a-sub-menu key="/order-management">
             <template #title>订单管理</template>
             <a-menu-item key="/order-management-supplier-history">
@@ -82,10 +91,7 @@
           <a-menu-item key="/profile">
             <router-link to="/profile">个人信息</router-link>
           </a-menu-item>
-          <!-- <a-menu-item key="/documentation">
-            <router-link to="/documentation">订单管理文档</router-link>
-          </a-menu-item> -->
-        
+          </template>
         </a-menu>
       </div>
       <div style="color: rgba(255, 255, 255, 0.85); font-size: 13px">
