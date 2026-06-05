@@ -77,7 +77,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { listPendingInvoiceGeneral, listPendingInvoiceBom, checkDraftSettlement } from '@/api/srm'
+import { listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import dayjs from 'dayjs'
 
@@ -256,24 +256,11 @@ async function onGenerateSettlement() {
     return
   }
 
-  // 检查是否有草稿结算单
-  const acceptDetailIds = selectedRows.value.map((r: any) => r.acceptDetailId)
-  try {
-    const checkResult = await checkDraftSettlement(acceptDetailIds)
-    if (checkResult.hasDraft) {
-      message.warning(checkResult.message || '已有草稿结算单，请勿重复操作')
-      return
-    }
-  } catch (e: any) {
-    message.error(e.message || '检查失败')
-    return
-  }
-
-  // 跳转到结算单创建页面，带上选中的数据
+  // 跳转到结算单创建页面，带上选中的验收单号
   router.push({
     name: 'invoice-settlement-create',
     query: {
-      details: JSON.stringify(selectedRows.value),
+      applyNos: JSON.stringify(applyNos),
       type: activeTab.value
     }
   })

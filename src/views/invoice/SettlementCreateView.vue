@@ -236,7 +236,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile } from '@/api/srm'
+import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile, getInvoiceDetailsByApplyNos, listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import { LoadingOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
@@ -619,14 +619,22 @@ function downloadCompletionTemplate() {
   window.open(url, '_blank')
 }
 
-onMounted(() => {
-  // 从路由参数解析选中的明细
-  if (route.query.details) {
+onMounted(async () => {
+  // 从路由参数解析验收单号，调用API获取明细
+  if (route.query.applyNos && route.query.type) {
     try {
-      selectedDetails.value = JSON.parse(route.query.details as string)
-      console.log('解析选中明细:', selectedDetails.value)
+      const applyNos = JSON.parse(route.query.applyNos as string)
+      const type = route.query.type as 'general' | 'bom'
+      const result = await getInvoiceDetailsByApplyNos({
+        supplierNo: session.supplierNo,
+        isAdmin: session.isAdmin,
+        applyNos,
+        type
+      })
+      selectedDetails.value = result.items || []
+      console.log('获取验收明细:', selectedDetails.value)
     } catch (e) {
-      console.error('解析选中明细失败', e)
+      console.error('获取验收明细失败', e)
     }
   }
 })

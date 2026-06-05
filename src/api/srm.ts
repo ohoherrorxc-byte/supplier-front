@@ -549,6 +549,17 @@ export async function getPendingInvoiceCount(userId: string) {
   return data
 }
 
+// 根据验收单号列表获取明细（用于生成结算单）
+export async function getInvoiceDetailsByApplyNos(params: {
+  supplierNo?: string
+  isAdmin?: boolean
+  applyNos: string[]
+  type: 'general' | 'bom'
+}) {
+  const { data } = await http.get<{ items: JsonMap[]; total: number }>('/invoice/details/by-apply-nos', { params })
+  return data
+}
+
 // 获取工作台消息列表
 export async function getDashboardMessages(userId: string) {
   const { data } = await http.get<{ type: string; no: string; text: string }[]>('/invoice/dashboard/messages', { params: { userId } })
