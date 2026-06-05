@@ -48,9 +48,11 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { getSupplierProfile, changePassword, type JsonMap } from '@/api/srm'
 
+const router = useRouter()
 const session = useSessionStore()
 const loading = ref(false)
 const error = ref('')
@@ -154,9 +156,9 @@ async function handleChangePassword() {
       oldPassword: passwordForm.value.oldPassword,
       newPassword: passwordForm.value.newPassword
     })
-    
-    successMessage.value = '密码修改成功'
-    
+
+    successMessage.value = '密码修改成功，请重新登录'
+
     // 重置表单
     passwordForm.value = {
       oldPassword: '',
@@ -168,6 +170,12 @@ async function handleChangePassword() {
         confirmPassword: ''
       }
     }
+
+    // 1秒后跳转到登录页
+    setTimeout(() => {
+      session.logout()
+      router.push({ name: 'login' })
+    }, 1000)
   } catch (e: unknown) {
     error.value = (e as { friendlyMessage?: string }).friendlyMessage || '修改密码失败'
   } finally {
