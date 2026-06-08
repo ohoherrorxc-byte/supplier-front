@@ -22,9 +22,18 @@
             <router-link to="/dashboard">工作台</router-link>
           </a-menu-item>
           <template v-if="session.onlyOpenInvoice">
-          <a-menu-item key="/invoice">
-            <router-link to="/invoice/pending/general">供应商对账平台</router-link>
-          </a-menu-item>
+           <a-sub-menu key="/invoice">
+            <template #title>供应商对账平台</template>
+            <a-menu-item key="/invoice/pending/general">
+              <router-link to="/invoice/pending/general">待开票清单 - 一般采购</router-link>
+            </a-menu-item>
+            <a-menu-item key="/invoice/pending/bom">
+              <router-link to="/invoice/pending/bom">待开票清单 - 生产采购</router-link>
+            </a-menu-item>
+            <a-menu-item key="/invoice/settlement/list">
+              <router-link to="/invoice/settlement/list">结算单</router-link>
+            </a-menu-item>
+          </a-sub-menu>
           <a-menu-item key="/profile">
             <router-link to="/profile">个人信息</router-link>
           </a-menu-item>
