@@ -77,7 +77,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
+import { listPendingInvoiceGeneral, listPendingInvoiceBom, checkDraftSettlement } from '@/api/srm'
 import { useSessionStore } from '@/stores/session'
 import dayjs from 'dayjs'
 
@@ -253,6 +253,19 @@ async function onGenerateSettlement() {
   const applyNos = [...new Set(selectedRows.value.map((r: any) => r.acceptApplyNo))]
   if (applyNos.length > 1) {
     message.warning('不允许同时结算不同验收申请编号的明细，请分开选择')
+    return
+  }
+
+  // 校验是否已有草稿结算单
+  const acceptDetailIds = selectedRows.value.map((r: any) => r.acceptDetailId)
+  try {
+    const result = await checkDraftSettlement(acceptDetailIds)
+    if (result.hasDraft) {
+      message.warning(result.message || '已有结算单草稿，请勿重复生成')
+      return
+    }
+  } catch (e: any) {
+    message.error(e.message || '校验草稿失败')
     return
   }
 
