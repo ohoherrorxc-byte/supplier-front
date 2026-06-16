@@ -1,12 +1,9 @@
 
 > srm-portal-frontend@0.1.0 dev
-> vite
+> vite --port 30158
 
-Port 9173 is in use, trying another one...
-Port 9174 is in use, trying another one...
-Port 9175 is in use, trying another one...
 
-  VITE v6.4.2  ready in 375 ms
+  VITE v6.4.2  ready in 480 ms
 
-  ➜  Local:   http://localhost:9176/
+  ➜  Local:   http://localhost:30158/
   ➜  Network: use --host to expose
