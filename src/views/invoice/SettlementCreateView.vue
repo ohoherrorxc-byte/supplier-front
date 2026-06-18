@@ -93,7 +93,7 @@
                 style="width: 100%"
                 placeholder="价税合计"
               /> -->
-              {{ record.totalAmount ? `¥${Number(record.totalAmount).toFixed(2)}` : '' }}
+              {{ record.totalAmount ? `${Number(record.totalAmount).toFixed(2)}` : '' }}
             </template>
             <template v-else-if="column.key === 'fileName'">
               <a href="javascript:void(0)" v-if="record.fileUrl" @click="downloadFile(record.fileUrl, record.fileName)">

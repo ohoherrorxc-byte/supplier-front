@@ -33,7 +33,10 @@
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'invoiceTotalAmount'">
-          ¥{{ Number(record.invoiceTotalAmount || 0).toFixed(2) }}
+          {{ Number(record.invoiceTotalAmount || 0).toFixed(2) }}
+        </template>
+        <template v-if="column.key === 'currency'">
+          {{ record.currency || 'RMB' }}
         </template>
         <!-- <template v-if="column.key === 'invoiceDate'">
           {{ formatDate(record.invoiceDate) }}
@@ -84,13 +87,16 @@
             {{ record.taxRate != null ? record.taxRate + '%' : '-' }}
           </template>
           <template v-if="column.key === 'amount'">
-            {{ record.amount != null ? '¥' + Number(record.amount).toFixed(2) : '-' }}
+            {{ record.amount != null ? '' + Number(record.amount).toFixed(2) : '-' }}
           </template>
           <template v-if="column.key === 'taxAmount'">
-            {{ record.taxAmount != null ? '¥' + Number(record.taxAmount).toFixed(2) : '-' }}
+            {{ record.taxAmount != null ? '' + Number(record.taxAmount).toFixed(2) : '-' }}
           </template>
           <template v-if="column.key === 'totalAmount'">
-            {{ record.totalAmount != null ? '¥' + Number(record.totalAmount).toFixed(2) : '-' }}
+            {{ record.totalAmount != null ? '' + Number(record.totalAmount).toFixed(2) : '-' }}
+          </template>
+          <template v-if="column.key === 'currency'">
+            {{ record.currency || 'RMB' }}
           </template>
           <template v-if="column.key === 'attachment'">
             <a v-if="record.attachmentUrl" href="javascript:void(0)" @click="downloadFile(record.attachmentUrl, record.attachmentName)">{{ record.attachmentName || '下载附件' }}</a>
@@ -186,6 +192,7 @@ const columns = [
   { title: '发票号码', dataIndex: 'invoiceNo', key: 'invoiceNo', width: 150 },
   { title: '开票日期', dataIndex: 'invoiceDate', key: 'invoiceDate', width: 120 },
   { title: '价税合计', dataIndex: 'invoiceTotalAmount', key: 'invoiceTotalAmount', width: 120, align: 'right' },
+  { title: '币种', dataIndex: 'currency', key: 'currency', width: 80 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
   { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160 },
   { title: '操作', key: 'action', width: 100 }
@@ -202,6 +209,7 @@ const invoiceColumns = [
   { title: '金额(不含税)', dataIndex: 'amount', key: 'amount', width: 100, align: 'right' },
   { title: '税额', dataIndex: 'taxAmount', key: 'taxAmount', width: 80, align: 'right' },
   { title: '价税合计', dataIndex: 'totalAmount', key: 'totalAmount', width: 100, align: 'right' },
+  { title: '币种', dataIndex: 'currency', key: 'currency', width: 80 },
   { title: '附件', key: 'attachment', width: 80 }
 ]
 
