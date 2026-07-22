@@ -64,7 +64,7 @@
           <right-outlined />
         </div>
       </div>
-      <div class="stat-card stat-success" @click="go('/shipments')">
+      <!-- <div class="stat-card stat-success" @click="go('/shipments')">
         <div class="stat-icon">
           <car-outlined />
         </div>
@@ -75,7 +75,7 @@
         <div class="stat-arrow">
           <right-outlined />
         </div>
-      </div>
+      </div> -->
 
       <!-- <div class="stat-card stat-info" @click="go('/shipments?actualEtaDate=' + dayjs().format('YYYY-MM-DD'))">
         <div class="stat-icon">
