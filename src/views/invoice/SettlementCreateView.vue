@@ -512,17 +512,17 @@ async function onSubmit() {
       }
     }
     // License：校验条目数、总额，但不校验品名
-    // else if (orderTypeStr === 'License') {
-    //   if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-    //     errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-    //   }
-    // }
-    // // 开发费及其他：不校验品名和条目数，只校验总额
-    // else {
-    //   if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-    //     errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-    //   }
-    // }
+    else if (orderTypeStr === 'License') {
+      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+      }
+    }
+    // 开发费及其他：不校验品名和条目数，只校验总额
+    else {
+      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
+        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
+      }
+    }
 
     if (errors.length > 0) {
       message.warning(`第${i + 1}条发票与验收明细不一致: ${errors.join(', ')}`)
