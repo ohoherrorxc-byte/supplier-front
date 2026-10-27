@@ -73,7 +73,7 @@
                 style="width: 100%"
                 placeholder="金额(不含税)"
               /> -->
-              {{ record.amount ? `¥${Number(record.amount).toFixed(2)}` : '' }}
+              {{ formatMoney(record.amount, record.currency) }}
             </template>
             <template v-else-if="column.key === 'taxAmount'">
               <!-- <a-input-number disabled
@@ -83,7 +83,10 @@
                 style="width: 100%"
                 placeholder="税额"
               /> -->
-              {{ record.taxAmount ? `¥${Number(record.taxAmount).toFixed(2)}` : '' }}
+              {{ formatMoney(record.taxAmount, record.currency) }}
+            </template>
+            <template v-else-if="column.key === 'currency'">
+              {{ record.currency || '' }}
             </template>
             <template v-else-if="column.key === 'totalAmount'">
               <!-- <a-input-number disabled
@@ -93,7 +96,7 @@
                 style="width: 100%"
                 placeholder="价税合计"
               /> -->
-              {{ record.totalAmount ? `${Number(record.totalAmount).toFixed(2)}` : '' }}
+              {{ formatMoney(record.totalAmount, record.currency) }}
             </template>
             <template v-else-if="column.key === 'fileName'">
               <a href="javascript:void(0)" v-if="record.fileUrl" @click="downloadFile(record.fileUrl, record.fileName)">
@@ -121,7 +124,7 @@
         <div style="margin-top: 16px; text-align: right; font-size: 16px">
           <span>发票总金额：</span>
           <strong style="color: #1890ff; font-size: 20px">
-            ¥{{ totalInvoiceAmount.toFixed(2) }}
+            {{ formatMoney(totalInvoiceAmount) }}
           </strong>
         </div>
       </a-card>
@@ -139,10 +142,11 @@
           </div>
         </div>
         <a-table
+          :key="showOriginalCurrency ? 'detail-original' : 'detail-rmb'"
           :columns="detailColumns"
           :data-source="selectedDetails"
           :pagination="false"
-          row-key="accept_detail_id"
+          row-key="acceptDetailId"
           size="small"
         >
           <template #bodyCell="{ column, record }">
@@ -150,28 +154,32 @@
               {{ Number(record.quantity || 0).toFixed(2) }}
             </template>
             <template v-if="column.key === 'amount'">
-              {{ Number(record.amount || 0).toFixed(2) }}
+              {{ formatMoney(record.amount, 'RMB') }}
+            </template>
+            <template v-if="column.key === 'originalAmount'">
+              {{ formatMoney(record.originalAmount, record.currency) }}
+            </template>
+            <template v-if="column.key === 'currency'">
+              {{ record.currency || '' }}
             </template>
           </template>
         </a-table>
 
        
 
-        <!-- 金额汇总 -->
+        <!-- 金额汇总：验收总金额取验收单人民币总额，不按明细加总 -->
         <div style="margin-top: 16px; text-align: right; font-size: 16px">
-          <span>勾选明细总金额：</span>
-          <strong style="color: #1890ff; font-size: 20px">¥{{ totalDetailAmount.toFixed(2) }}</strong>
+          <span>验收单总金额：</span>
+          <strong style="color: #1890ff; font-size: 20px">{{ formatMoney(totalDetailAmount) }}</strong>
           <span style="margin-left: 24px; color: #666">发票总金额：</span>
           <strong :style="{ color: amountMatch ? '#52c41a' : '#ff4d4f', fontSize: '20px' }">
-            ¥{{ totalInvoiceAmount.toFixed(2) }}
+            {{ formatMoney(totalInvoiceAmount) }}
           </strong>
         </div>
 
-        <!-- 金额校验提示 -->
-        <div v-if="amountDiff !== 0" style="margin-top: 8px; text-align: right; color: #ff4d4f">
-          {{ amountDiff < 0 ? '发票金额偏小' : '发票金额偏大' }}：相差¥{{ Math.abs(amountDiff).toFixed(2) }}
-          <span v-if="Math.abs(amountDiff) > tolerance" style="color: #ff4d4f">（数据不一致）</span>
-          <span v-else style="color: #52c41a">（数据一致）</span>
+        <!-- 金额校验提示：按分比较，避免浮点误差误报 -->
+        <div v-if="!amountMatch" style="margin-top: 8px; text-align: right; color: #ff4d4f">
+          {{ amountDiff < 0 ? '发票金额偏小' : '发票金额偏大' }}：相差{{ formatMoney(Math.abs(amountDiff)) }}（须完全一致）
         </div>
       </a-card>
 
@@ -236,7 +244,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, downloadFile, getInvoiceDetailsByApplyNos, listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
+import { createSettlementOrder, ocrRecognize, uploadFile, checkDraftSettlement, checkUsedInvoices, downloadFile, getInvoiceDetailsByApplyNos, listPendingInvoiceGeneral, listPendingInvoiceBom } from '@/api/srm'
+import { completionAttachmentRequired, orderAttachmentRequired, roundMoney, shouldSkipInvoiceLineCount, validateInvoiceRules } from './invoiceSubmitRules'
 import { useSessionStore } from '@/stores/session'
 import { LoadingOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
@@ -254,16 +263,10 @@ const orderFiles = ref<{ id: number; name: string; url: string }[]>([])
 
 const orderType = computed(() => selectedDetails.value[0]?.purchaseOrderType || '')
 console.log('订单类型:', orderType.value)
-console.log('选中明细:', selectedDetails.value) 
+console.log('选中明细:', selectedDetails.value)
 
-const isCompletionRequired = computed(() => {
-  const ot = orderType.value
-  return ot === '服务类' || ot === '开发费及其他' || ot === '其他'
-})
-const isOrderRequired = computed(() => {
-  const ot = (orderType.value || '').toLowerCase()
-  return ot.includes('license') || ot.includes('lisence')
-})
+const isCompletionRequired = computed(() => completionAttachmentRequired(orderType.value))
+const isOrderRequired = computed(() => orderAttachmentRequired(orderType.value || ''))
 
 interface InvoiceLine {
   key: string
@@ -281,52 +284,118 @@ interface InvoiceLine {
   fileName: string
   fileUrl: string,
   acceptApplyNo: string
+  currency: string
 }
 
 const invoiceLines = ref<InvoiceLine[]>([])
 
-const invoiceColumns = [
-  { title: '发票号码', key: 'invoiceNo', width: 120 },
-  { title: '开票日期', key: 'invoiceDate', width: 120 },
-  { title: '品名', key: 'projectName', width: 120 },
-  { title: '零件号', key: 'partNo', width: 100 },
-  { title: '数量', key: 'quantity', width: 80, align: 'right' },
-  { title: '单位', key: 'unit', width: 60 },
-  { title: '税率(%)', key: 'taxRate', width: 80 },
-  { title: '金额(不含税)', key: 'amount', width: 120, align: 'right' },
-  { title: '税额', key: 'taxAmount', width: 100, align: 'right' },
-  { title: '价税合计', key: 'totalAmount', width: 120, align: 'right' },
-  { title: '附件', key: 'fileName', width: 150 },
-  { title: '操作', key: 'action', width: 80 }
-]
+function isForeignCurrency(currency: unknown): boolean {
+  const s = String(currency ?? '').trim().toUpperCase()
+  return s !== '' && s !== 'RMB' && s !== 'CNY' && s !== '人民币'
+}
 
-const detailColumns = [
- 
-  { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 180 },
-  { title: '详述及技术性能', dataIndex: 'remark', key: 'remark' ,width: 180},
-   { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120},
-  { title: '单位', dataIndex: 'unitName', key: 'unitName', width: 60},
-  { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 180 },
-  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
-  { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' }
-]
+const foreignCurrency = computed(() => {
+  const fromInvoice = invoiceLines.value.find(line => isForeignCurrency(line.currency))?.currency
+  if (fromInvoice) return String(fromInvoice).trim().toUpperCase()
+  const fromDetail = selectedDetails.value.find(d => isForeignCurrency(d.currency))?.currency
+  return fromDetail ? String(fromDetail).trim().toUpperCase() : ''
+})
 
+const isForeign = computed(() => !!foreignCurrency.value)
+
+function detailSupplierName(detail: any) {
+  return String(detail?.supplierName || detail?.supplier_name || '').trim()
+}
+
+const isCerenceSupplier = computed(() =>
+  selectedDetails.value.some(d => detailSupplierName(d).toLowerCase() === 'cerence gmbh')
+)
+
+const skipInvoiceLineCountCheck = computed(() =>
+  shouldSkipInvoiceLineCount(selectedDetails.value.map((d) => detailSupplierName(d)))
+)
+
+const showOriginalCurrency = computed(() => isForeign.value || isCerenceSupplier.value)
+
+function formatMoney(value: unknown, currency?: string) {
+  if (value == null || value === '') return ''
+  const n = Number(value)
+  if (Number.isNaN(n)) return ''
+  const text = n.toFixed(2)
+  const code = String(currency || (isForeign.value ? foreignCurrency.value : 'RMB')).trim().toUpperCase()
+  if (isForeignCurrency(code)) return `${code} ${text}`
+  return `¥${text}`
+}
+
+function detailCompareAmount(detail: any) {
+  if (showOriginalCurrency.value) return Number(detail?.originalAmount ?? detail?.amount ?? 0)
+  return Number(detail?.amount || 0)
+}
+
+const invoiceColumns = computed(() => {
+  const cols: any[] = [
+    { title: '发票号码', key: 'invoiceNo', width: 120 },
+    { title: '开票日期', key: 'invoiceDate', width: 120 },
+    { title: '品名', key: 'projectName', width: 120 },
+    { title: '零件号', key: 'partNo', width: 100 },
+    { title: '数量', key: 'quantity', width: 80, align: 'right' },
+    { title: '单位', key: 'unit', width: 60 },
+    { title: '税率(%)', key: 'taxRate', width: 80 },
+    { title: '金额(不含税)', key: 'amount', width: 130, align: 'right' },
+    { title: '税额', key: 'taxAmount', width: 110, align: 'right' },
+    { title: '价税合计', key: 'totalAmount', width: 130, align: 'right' }
+  ]
+  if (showOriginalCurrency.value) {
+    cols.push({ title: '币种', key: 'currency', width: 70 })
+  }
+  cols.push({ title: '附件', key: 'fileName', width: 150 })
+  cols.push({ title: '操作', key: 'action', width: 80 })
+  return cols
+})
+
+const detailColumns = computed(() => {
+  const cols: any[] = [
+    { title: '品名', dataIndex: 'partsName', key: 'partsName', width: 180 },
+    { title: '详述及技术性能', dataIndex: 'remark', key: 'remark', width: 180 },
+    { title: '零件号', dataIndex: 'partsNo', key: 'partsNo', width: 120 },
+    { title: '单位', dataIndex: 'unitName', key: 'unitName', width: 60 },
+    { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 180 },
+    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' },
+    { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right' }
+  ]
+  if (showOriginalCurrency.value) {
+    cols.push({ title: '原币', dataIndex: 'originalAmount', key: 'originalAmount', width: 130, align: 'right' })
+    cols.push({ title: '币种', dataIndex: 'currency', key: 'currency', width: 70 })
+  }
+  return cols
+})
+
+/** 验收总金额：优先验收单表头人民币/原币总额，不按明细行加总 */
 const totalDetailAmount = computed(() => {
-  return selectedDetails.value.reduce((sum, d) => sum + Number(d.amount || 0), 0)
+  const first = selectedDetails.value[0]
+  if (!first) return 0
+  if (showOriginalCurrency.value) {
+    const original = Number(first.acceptAmountOriginal)
+    if (!Number.isNaN(original) && original > 0) return roundMoney(original)
+  }
+  const rmb = Number(first.acceptAmountRmb)
+  if (!Number.isNaN(rmb) && first.acceptAmountRmb != null && first.acceptAmountRmb !== '') {
+    return roundMoney(rmb)
+  }
+  // 兼容旧接口未返回表头金额时回退明细加总
+  return roundMoney(selectedDetails.value.reduce((sum, d) => sum + detailCompareAmount(d), 0))
 })
 
 const totalInvoiceAmount = computed(() => {
-  return invoiceLines.value.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0)
+  return roundMoney(invoiceLines.value.reduce((sum, line) => sum + Number(line.totalAmount || 0), 0))
 })
 
 const amountDiff = computed(() => {
-  return totalInvoiceAmount.value - totalDetailAmount.value
+  return roundMoney(totalInvoiceAmount.value - totalDetailAmount.value)
 })
 
-const tolerance = 1 // 容差 ±1元
-
 const amountMatch = computed(() => {
-  return Math.abs(amountDiff.value) <= tolerance
+  return Math.abs(amountDiff.value) < 0.005
 })
 
 function generateKey() {
@@ -347,8 +416,8 @@ function addInvoiceLine() {
     attachmentId: null,
     fileName: '',
     fileUrl: '',
-    acceptApplyNo: ''
-    
+    acceptApplyNo: '',
+    currency: ''
   })
 }
 
@@ -374,14 +443,15 @@ async function handleFileUpload(file: File) {
         key: generateKey(),
         invoiceNo: r.invoiceNo || '',
         invoiceDate: r.invoiceDate ? dayjs(r.invoiceDate) : null,
-        projectName: r.projectName || '',
+        projectName: (r.projectName || '').trim(),
         partNo: r.partNo || '',
         quantity: r.quantity || 0,
         unit: r.unit || '',
-        taxRate: r.taxRate || 13,
-        amount: r.amount || 0,
-        taxAmount: r.taxAmount || 0,
-        totalAmount: r.totalAmount || 0,
+        taxRate: r.taxRate === undefined || r.taxRate === null || r.taxRate === '' ? 13 : Number(r.taxRate),
+        amount: Number(r.amount || 0),
+        taxAmount: Number(r.taxAmount || 0),
+        totalAmount: Number(r.totalAmount || 0),
+        currency: r.currency || '',
         attachmentId: attachmentId,
         fileName: i === 0 ? (uploadResult.name || file.name) : '同上一张发票',
         fileUrl: i === 0 ? (uploadResult.url || '') : '',
@@ -447,6 +517,22 @@ async function onSubmit() {
     }
   }
 
+  const invoiceNos = [...new Set(
+    invoiceLines.value
+      .map(line => String(line.invoiceNo || '').replace(/\s/g, ''))
+      .filter(Boolean)
+  )]
+  try {
+    const usedResult = await checkUsedInvoices(invoiceNos)
+    if (usedResult.used) {
+      message.warning(usedResult.message || '该发票已经使用过了，不可重复提交')
+      return
+    }
+  } catch (e: any) {
+    message.error(e.response?.data?.message || e.message || '发票号校验失败')
+    return
+  }
+
   if (selectedDetails.value.length === 0) {
     message.warning('没有可结算的明细')
     return
@@ -472,89 +558,38 @@ async function onSubmit() {
     return
   }
 
-  // 金额校验
-  if (!amountMatch.value) {
-    message.warning(`发票金额与验收明细金额不符，相差 ¥${Math.abs(amountDiff.value).toFixed(2)}，请核实后再提交`)
-    return
-  }
-
- 
-
-  // 获取订单类型：硬件PO订单、License、开发费及其他
   const orderTypeStr = selectedDetails.value[0]?.purchaseOrderType || ''
-  console.log('订单类型:', orderTypeStr)
-  if(orderTypeStr=== '硬件PO订单') {
-    // 校验发票条目数必须与验收明细条目数一致（逐条对应）
-   if (invoiceLines.value.length !== selectedDetails.value.length) {
-     message.warning(`发票条目数(${invoiceLines.value.length})与验收明细条目数(${selectedDetails.value.length})不一致，请核实后再提交`)
-     return
-   }
-  }
-  // 逐条校验：根据订单类型进行不同校验
-  for (let i = 0; i < invoiceLines.value.length; i++) {
-    const invoice = invoiceLines.value[i]
-    const detail = selectedDetails.value[i]
-    const errors: string[] = []
-
-    // 硬件PO订单：严格校验（品名、数量、单位、税后金额）
-    if (orderTypeStr === '硬件PO订单') {
-      if (invoice.projectName && detail.partsName && invoice.projectName !== detail.partsName) {
-        errors.push(`品名(${invoice.projectName}≠${detail.partsName})`)
-      }
-      if (Number(invoice.quantity || 0) !== Number(detail.quantity || 0)) {
-        errors.push(`数量(${invoice.quantity}≠${detail.quantity})`)
-      }
-      if (invoice.unit && detail.unitName && invoice.unit !== detail.unitName) {
-        errors.push(`单位(${invoice.unit}≠${detail.unitName})`)
-      }
-      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-      }
-    }
-    // License：校验条目数、总额，但不校验品名
-    else if (orderTypeStr === 'License') {
-      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-      }
-    }
-    // 开发费及其他：不校验品名和条目数，只校验总额
-    else {
-      if (Math.abs(Number(invoice.totalAmount || 0) - Number(detail.amount || 0)) > 0) {
-        errors.push(`价税合计(¥${Number(invoice.totalAmount || 0).toFixed(2)}≠¥${Number(detail.amount || 0).toFixed(2)})`)
-      }
-    }
-
-    if (errors.length > 0) {
-      message.warning(`第${i + 1}条发票与验收明细不一致: ${errors.join(', ')}`)
-      return
-    }
-  }
-
-  // 校验发票日期不能小于验收归档日期
-  const acceptDate = selectedDetails.value[0]?.acceptDate
-  if (acceptDate) {
-    const acceptDateStr = dayjs(acceptDate).format('YYYY-MM-DD')
-    for (let i = 0; i < invoiceLines.value.length; i++) {
-      const invoiceDateStr = invoiceLines.value[i].invoiceDate ? dayjs(invoiceLines.value[i].invoiceDate).format('YYYY-MM-DD') : null
-      if (invoiceDateStr && invoiceDateStr < acceptDateStr) {
-        message.warning(`第${i + 1}条开票日期(${invoiceDateStr})不能小于验收归档日期(${acceptDateStr})`)
-        return
-      }
-    }
-  }
-
-  // 附件要求校验
-  const ot = orderType.value || ''
-  const otLower = ot.toLowerCase()
-  console.log('附件校验 otLower:', otLower, 'orderFiles:', orderFiles.value.length)
-  if (otLower === 'lisence' || otLower.includes('lisence')) {
-    if (orderFiles.value.length === 0) {
-      message.warning('License类型验收单必须上传订单附件')
-      return
-    }
-  }
-  if ((ot === '服务类' || ot === '开发费及其他' || ot === '其他') && completionFiles.value.length === 0) {
-    message.warning('服务类类型验收单必须上传账单/完工单附件')
+  const ruleError = validateInvoiceRules({
+    orderType: orderTypeStr,
+    skipLineCount: skipInvoiceLineCountCheck.value,
+    invoiceTotal: totalInvoiceAmount.value,
+    acceptTotal: totalDetailAmount.value,
+    orderFileCount: orderFiles.value.length,
+    completionFileCount: completionFiles.value.length,
+    formatAmount: (amount, currency) => formatMoney(amount, currency),
+    invoices: invoiceLines.value.map(line => ({
+      invoiceDate: line.invoiceDate ? dayjs(line.invoiceDate).format('YYYY-MM-DD') : null,
+      projectName: line.projectName,
+      partNo: line.partNo,
+      quantity: line.quantity,
+      unit: line.unit,
+      totalAmount: line.totalAmount,
+      currency: line.currency,
+      attachmentId: line.attachmentId,
+      fileUrl: line.fileUrl,
+      fileName: line.fileName
+    })),
+    details: selectedDetails.value.map(detail => ({
+      partsName: detail.partsName,
+      partsNo: detail.partsNo,
+      unitName: detail.unitName,
+      quantity: detail.quantity,
+      compareAmount: detailCompareAmount(detail),
+      acceptDate: detail.acceptDate ? dayjs(detail.acceptDate).format('YYYY-MM-DD') : null
+    }))
+  })
+  if (ruleError) {
+    message.warning(ruleError)
     return
   }
 
@@ -578,6 +613,7 @@ async function doSubmit() {
       amount: line.amount,
       taxAmount: line.taxAmount,
       totalAmount: line.totalAmount,
+      currency: line.currency || (isForeign.value ? foreignCurrency.value : 'RMB'),
       attachmentId: line.attachmentId,
       attachmentName: line.fileName,
       attachmentUrl: line.fileUrl,
@@ -586,7 +622,7 @@ async function doSubmit() {
 
     const result = await createSettlementOrder({
       userId: session.operatorUserId,
-      supplierName: selectedDetails.value[0]?.supplier_name || '',
+      supplierName: detailSupplierName(selectedDetails.value[0]),
       remark: remark.value,
       createDept: session.userId,
       acceptDetailIds,
@@ -609,7 +645,7 @@ function onCancel() {
 }
 
 function downloadCompletionTemplate() {
-  const totalAmount = selectedDetails.value.reduce((sum, d) => sum + Number(d.amount || 0), 0).toFixed(2)
+  const totalAmount = Number(totalDetailAmount.value || 0).toFixed(2)
   const contractNo = selectedDetails.value[0]?.contractNo || ''
   const supplierName = selectedDetails.value[0]?.supplierName || ''
 

@@ -95,6 +95,7 @@
               :columns="forecastListColumns"
               :data-source="forecastListDataSource"
               :loading="loading"
+              row-key="order_no"
               :row-selection="forecastListRowSelection"
               :pagination="pagination"
               @change="handleTableChange"
@@ -163,6 +164,7 @@
               :columns="forecastDetailListColumns"
               :data-source="forecastDetailListDataSource"
               :loading="loading"
+              row-key="detail_id"
               :row-selection="forecastDetailListRowSelection"
               :pagination="pagination"
               @change="handleTableChange"
@@ -473,14 +475,20 @@ function handleViewDetail(record: any) {
 }
 
 function handleExport() {
-  const orderNos = parseBatchInput(queryParams.orderNo)
+  const selectedKeys = (selectedRowKeys.value || []).map(key => String(key)).filter(Boolean)
+  if (selectedKeys.length === 0) {
+    message.warning('请先选择要导出的预测')
+    return
+  }
   const partsNumbers = parseBatchInput(queryParams.partsNumber)
   const startDate = queryParams.dateRange?.[0] ? String(queryParams.dateRange[0]).substring(0, 7) : ''
   const endDate = queryParams.dateRange?.[1] ? String(queryParams.dateRange[1]).substring(0, 7) : ''
+  const exportingDetails = activeTab.value === 'forecast-detail-list'
 
   exportPurchasePlan({
     userId: session.userId.toString(),
-    orderNo: orderNos.length > 0 ? orderNos : undefined,
+    orderNo: exportingDetails ? undefined : selectedKeys,
+    detailIds: exportingDetails ? selectedKeys : undefined,
     partsNumber: partsNumbers.length > 0 ? partsNumbers : undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,

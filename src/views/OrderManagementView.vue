@@ -745,6 +745,7 @@ async function handleExport() {
       deliveryStatus: queryParams.deliveryStatus.length > 0 ? queryParams.deliveryStatus : undefined,
       startDate,
       endDate,
+      requireAttr: '订单',
       limit: 10000,
       offset: 0
     })

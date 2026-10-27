@@ -122,6 +122,9 @@
           <template v-if="column.key === 'amount'">
             {{ record.amount != null ? '¥' + Number(record.amount).toFixed(2) : '-' }}
           </template>
+          <template v-if="column.key === 'originalAmount'">
+            {{ record.originalAmount != null ? (record.currency && !['RMB','CNY','人民币'].includes(String(record.currency).toUpperCase()) ? record.currency + ' ' : '') + Number(record.originalAmount).toFixed(2) : '-' }}
+          </template>
         </template>
       </a-table>
 
@@ -220,6 +223,8 @@ const detailColumns = [
   { title: '验收单号', dataIndex: 'acceptApplyNo', key: 'acceptApplyNo', width: 150 },
   { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 70, align: 'right' },
   { title: '金额', dataIndex: 'amount', key: 'amount', width: 100, align: 'right' },
+  { title: '原币', dataIndex: 'originalAmount', key: 'originalAmount', width: 120, align: 'right' },
+  { title: '币种', dataIndex: 'currency', key: 'currency', width: 70 },
 ]
 
 function statusText(status: number) {

@@ -37,7 +37,7 @@
         <a-input v-model:value="searchForm.partsName" placeholder="模糊搜索" style="width: 140px" />
       </a-form-item>
       <a-form-item>
-        <a-button type="primary" @click="loadData">查询</a-button>
+        <a-button type="primary" @click="onSearch">查询</a-button>
         <a-button style="margin-left: 8px" @click="resetSearch">重置</a-button>
       </a-form-item>
     </a-form>
@@ -230,11 +230,17 @@ function handleTableChange(pag: any) {
   loadData()
 }
 
+function onSearch() {
+  pagination.current = 1
+  loadData()
+}
+
 function resetSearch() {
   searchForm.acceptApplyNo = ''
   searchForm.orderNo = ''
   searchForm.partsNo = ''
   searchForm.partsName = ''
+  pagination.current = 1
   loadData()
 }
 

@@ -520,6 +520,8 @@ export async function listPendingInvoiceGeneral(params: {
   userId?: string
   supplierNo?: string
   isAdmin?: boolean
+  acceptApplyNo?: string
+  orderNo?: string
   partsNo?: string
   partsName?: string
   pageSize?: number
@@ -534,6 +536,8 @@ export async function listPendingInvoiceBom(params: {
   userId?: string
   supplierNo?: string
   isAdmin?: boolean
+  acceptApplyNo?: string
+  orderNo?: string
   partsNo?: string
   partsName?: string
   pageSize?: number
@@ -637,6 +641,11 @@ export async function checkDraftSettlement(acceptDetailIds: number[]) {
   return data
 }
 
+export async function checkUsedInvoices(invoiceNos: string[]) {
+  const { data } = await http.post<{ used: boolean; message?: string }>('/invoice/settlement/check-invoice', invoiceNos)
+  return data
+}
+
 // OCR识别发票
 export async function ocrRecognize(file: File) {
   const formData = new FormData()
@@ -659,6 +668,7 @@ export async function ocrRecognize(file: File) {
 export interface PurchasePlanQueryParams {
   userId: string
   orderNo?: string[]
+  detailIds?: string[]
   partsNumber?: string[]
   startDate?: string
   endDate?: string
