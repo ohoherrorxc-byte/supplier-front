@@ -21,11 +21,14 @@
           </el-col>
         </el-row>
         <a-table
+          class="invoice-info-table"
           :columns="invoiceColumns"
           :data-source="invoiceLines"
           :pagination="false"
+          :scroll="{ x: invoiceTableScrollX }"
           row-key="key"
           size="small"
+          table-layout="fixed"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'invoiceNo'">
@@ -43,7 +46,7 @@
             </template>
             <template v-else-if="column.key === 'projectName'">
               <!-- <a-input disabled v-model:value="record.projectName" placeholder="项目名称" /> -->
-              {{ record.projectName }}
+              <span class="invoice-project-name">{{ record.projectName }}</span>
             </template>
             <template v-else-if="column.key === 'partNo'">
               <!-- <a-input  disabled v-model:value="record.partNo" placeholder="零件号" /> -->
@@ -99,7 +102,13 @@
               {{ formatMoney(record.totalAmount, record.currency) }}
             </template>
             <template v-else-if="column.key === 'fileName'">
-              <a href="javascript:void(0)" v-if="record.fileUrl" @click="downloadFile(record.fileUrl, record.fileName)">
+              <a
+                v-if="record.fileUrl"
+                class="invoice-file-link"
+                href="javascript:void(0)"
+                :title="record.fileName"
+                @click="downloadFile(record.fileUrl, record.fileName)"
+              >
                 {{ record.fileName }}
               </a>
               <span v-else>-</span>
@@ -332,26 +341,32 @@ function detailCompareAmount(detail: any) {
   return Number(detail?.amount || 0)
 }
 
+const nowrapCell = () => ({ style: { whiteSpace: 'nowrap' } })
+
 const invoiceColumns = computed(() => {
   const cols: any[] = [
-    { title: '发票号码', key: 'invoiceNo', width: 120 },
-    { title: '开票日期', key: 'invoiceDate', width: 120 },
-    { title: '品名', key: 'projectName', width: 120 },
-    { title: '零件号', key: 'partNo', width: 100 },
-    { title: '数量', key: 'quantity', width: 80, align: 'right' },
-    { title: '单位', key: 'unit', width: 60 },
-    { title: '税率(%)', key: 'taxRate', width: 80 },
-    { title: '金额(不含税)', key: 'amount', width: 130, align: 'right' },
-    { title: '税额', key: 'taxAmount', width: 110, align: 'right' },
-    { title: '价税合计', key: 'totalAmount', width: 130, align: 'right' }
+    { title: '发票号码', key: 'invoiceNo', width: 210, customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '开票日期', key: 'invoiceDate', width: 120, customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '品名', key: 'projectName', width: 280 },
+    { title: '零件号', key: 'partNo', width: 130, customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '数量', key: 'quantity', width: 80, align: 'right', customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '单位', key: 'unit', width: 70, customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '税率(%)', key: 'taxRate', width: 90, customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '金额(不含税)', key: 'amount', width: 140, align: 'right', customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '税额', key: 'taxAmount', width: 110, align: 'right', customCell: nowrapCell, customHeaderCell: nowrapCell },
+    { title: '价税合计', key: 'totalAmount', width: 120, align: 'right', customCell: nowrapCell, customHeaderCell: nowrapCell }
   ]
   if (showOriginalCurrency.value) {
-    cols.push({ title: '币种', key: 'currency', width: 70 })
+    cols.push({ title: '币种', key: 'currency', width: 80, customCell: nowrapCell, customHeaderCell: nowrapCell })
   }
-  cols.push({ title: '附件', key: 'fileName', width: 150 })
-  cols.push({ title: '操作', key: 'action', width: 80 })
+  cols.push({ title: '附件', key: 'fileName', width: 280 })
+  cols.push({ title: '操作', key: 'action', width: 80, customCell: nowrapCell, customHeaderCell: nowrapCell })
   return cols
 })
+
+const invoiceTableScrollX = computed(() =>
+  invoiceColumns.value.reduce((sum, col) => sum + Number(col.width || 0), 0)
+)
 
 const detailColumns = computed(() => {
   const cols: any[] = [
@@ -678,3 +693,22 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.invoice-project-name {
+  display: inline-block;
+  max-width: 260px;
+  line-height: 22px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.invoice-file-link {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+</style>
